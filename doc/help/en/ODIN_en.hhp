@@ -1,0 +1,14 @@
+[OPTIONS]
+Auto Index=No
+Compatibility=1.1 or later
+Compiled file=ODIN_en.chm
+Contents file=ODIN_en.hhc
+Default topic=main_index.html
+Display compile progress=No
+Full-text search=Yes
+; Default Font=@Arial Unicode MSB,8,0
+Language=0x0409 English (United States)
+
+[FILES]
+main_index.html
+

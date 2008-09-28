@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html  xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="GENERATOR" content="Microsoft Visual Studio 8.0"/>
+<title></title>
+</head>
+<body>
+<h1>
+ODIN
+</h1>
+<h2>
+Purpose:
+</h2>
+<p>
+ODIN is a program to backup and restore hard disk partitions. It operates on 
+low level and directly reads or writes the blocks of a disk volume. In this
+way the complete contents of a drive can be saved to single file. So you 
+can for example backup a partition of a Windows installation including all
+the installed programs. Be careful: When restoring a backup image to the hard
+disk the complete disk contents gets erased. Be sure to select the correct
+image file and to choose the correct target partition.
+</p>
+
+<p>
+An image can only be restored to a partition of exactly the same size as 
+the original partition. ODIN will allow you to restore to a bigger partition
+but this may result in a corrupt file system. Sometimes you may be able to 
+repair this using tools like chkdsk, sometimes it may be unusable.
+</p>
+
+<h2>
+Usage:
+</h2>
+<h3><a name="backup">
+Backup a partition:
+</a></h3>
+<p>
+Select a volume in the list box and click the Backup radio button on the top.
+Select a destination path in the lower box and check that the target volume 
+has enough space left to store the complete contents of the source drive. You
+may enter a comment in the text box below that allows you later to identify
+for which purpose the image was created.
+</p>
+
+<h3><a name="restore">
+Restore a partition:
+</a></h3>
+<p>
+Select a volume in the list box and click the Restore radio button on the top.
+Select a path in the lower box. The volume in the upper box will be the target
+volume that the image will be copied to. After changing the keyboard focus the
+text box below the image file will display the comment that was created for 
+this image. The target volume should have the same size as the original volume
+and must not be smaller.
+</p>
+
+<h3><a name="verify">
+Verify
+</a></h3>
+<p>
+Select a file in the lower list box and click the Verify button on the side.
+The verify process will read the complete contents of the image file and 
+check that it contains the same contents as at the time the image was created.
+If parts of the image file have been manipulated or got modified you will 
+receive an error message.
+After a backup of a volume you can ensure in this way that the file was written 
+accurately. You can perform a verify at any time after the image was written.
+</p>
+
+<h2><a name="restrictions">
+Restrictions:
+</a></h2>
+<p>
+During a backup operation no file activity must be performed on the volume. 
+Therefore you can not backup the volume of the system partition where the 
+currently active Windows is installed (this will be possible in a future
+version). Backing up or restoring large images may take several hours of 
+operation.
+</p>
+<p>
+You must have admin privileges to run ODIN. In Windows Vista the user account
+control screen will appear after start.
+</p>
+
+<h2><a name="aborting">
+Aborting a process
+</a></h2>
+<p>
+By pressing the Exit button you can abort any running operation. When aborting
+a restore operation the target drive will be in an unusable state so that you 
+will need to reformat it before you can use it again.
+</p>
+
+<h2><a name="options">
+Options
+</a></h2>
+<p>
+When creating a backup image there exist various settings how an image will be created.
+</p>
+
+<h3>
+Disk Options
+</h3>
+<p>
+You can copy all blocks of a disk volume or only the blocks that are currently in
+use by the file system. Used blocks only can only be backuped if the file system
+is known, if the volume is mounted and the file system is not corrupted. Normally 
+you should only backup used blocks if the option is available. Save all blocks 
+for example if you want to make a backup of a damaged file system before trying
+repair attempts.
+</p>
+
+<h3>
+Compression Options
+</h3>
+<p>
+The blocks that are backuped can be compressed. Compression can save disk space.
+The amount of saved space highly depends on the data that are stored on the file
+system. If it contains programs (.exe, .dll files) or text and office files the 
+compression will be efficient. If the volume contains files that are already
+compressed like multimedia files (videos, MP3, JPEGs) you will not benefit from 
+a compression of the backup image. You can choose between the gzip and the bzip2
+compression algorithm. gzip is faster and bzip2 typically achieves a slightly
+better compression ratio.
+</p>
+
+<h3>
+File Size
+</h3>
+<p>
+You can specify a maximum file size for a backup image. If the backup image 
+exceeds the given file size the image file will be split and the file names
+are appended with a sequence number. This is useful for example if you later
+want to save the files to CDs or DVDs.
+</p>
+</body>
+</html>
