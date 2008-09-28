@@ -1,0 +1,56 @@
+TODO.TXT
+========
+
+check/delete split file if they already exist before a backup operation starts (check unique filenames) ok
+Exception falls header zu lang wird für chunk länge ok
+Test AskUserForFileName ok
+Test verifyRun ok
+check before overwriting image file ok
+warn before restore ok
+warn this is beta ok 
+file dialog browse: extension, must exist bei save ok
+allow to insert a comment when creating backup ok
+verify always fails ok 
+VerifyTest ok
+exception when selecting a wrong file format in restore mode ok
+warning when source and target are on same drive ok
+warning backup of windows partition ok
+error restore to windows partition ok
+check cluster size and drive compatibility when restoring done (ok if cluster size changes)
+float used when formatting bytes values ok
+warning/error to restore partition image on full disk ok
+progress bar wrong when restoring highly compressed images (ok)
+check partition types (ok)
+ODINManagerTest ok
+error/warning if file size exceeds 4GB on FAT partitions ok
+Important: check file size for split file must not be less than length of block in our buffer queue ok
+Read-Blockgröße konfigurierbar ok
+BUG: if split option is set and just the value of file size is changed the new value is ignored (not marked dirty) ok
+enable verify button only when file is readable ok
+cancel instead of exit when in processing state ok
+ask before cancelling a backup/restore operation ok
+cleanup partially written files after cancelling a save ok
+credits in about box (ok)
+improve share flags are incompatible message (ok)
+fix wrong icon in main dialog title bar (ok)
+put all strings in ODINDlg in resources (ok=
+bzip2 Version aktualisieren (ok)
+
+Logfile
+localize exceptions
+
+vss service
+command line interface
+network transfer
+EFI partitions
+backup boot sector and partition tables
+
+
+
+
+
+
+
+
+
+
