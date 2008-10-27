@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)\lib\cppunit-1.12.0\include&quot;;&quot;C:\jens\Visual Studio 2005\wtl-7.5\include&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)\lib\cppunit-1.12.0\include&quot;;C:\DevTools\atl30;C:\DevTools\WTL80\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -62,7 +62,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cppunitd.lib"
+				AdditionalDependencies="shlwapi.lib cppunitd.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)\lib\cppunit-1.12.0\lib&quot;"
 				GenerateDebugInformation="true"
@@ -121,7 +121,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)\lib\cppunit-1.12.0\include&quot;;&quot;C:\jens\Visual Studio 2005\wtl-7.5\include&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)\lib\cppunit-1.12.0\include&quot;;C:\DevTools\atl30;C:\DevTools\WTL80\include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="2"
@@ -140,7 +140,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cppunit.lib"
+				AdditionalDependencies="shlwapi.lib cppunit.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)\lib\cppunit-1.12.0\lib&quot;"
 				GenerateDebugInformation="true"
