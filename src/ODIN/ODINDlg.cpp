@@ -136,8 +136,6 @@ void CODINDlg::Init()
   fSourceSize = 0;
   fMaxTargetSize = 0;
   fBytesProcessed = 0;
-  fTimeElapsed = 0;
-  fTimeLeft = 0;
   fSpeed = 0;
   fVerifyRun = false;
 }
@@ -564,8 +562,9 @@ void CODINDlg::UpdateStatus(bool bInit)
     ddTimeDifference = timer.QuadPart - startTimer.QuadPart;
     // convert to seconds
     ddTimeDifference = (ddTimeDifference + (performanceFrequency.QuadPart>>1) )/ performanceFrequency.QuadPart;
-    CTimeSpan elapsedTime(0, 0, 0, (int)ddTimeDifference);
-    WTL::CString timeLabel = elapsedTime.Format(L"%H:%M:%S");
+    WTL::CString timeLabel;
+    DWORD dwTimeDifference = (DWORD) ddTimeDifference;
+    timeLabel.Format(L"%02u:%02u:%02u", dwTimeDifference/3600, dwTimeDifference % 3600 / 60, dwTimeDifference % 60);
     label = GetDlgItem(IDC_LABEL_TIME_ELAPSED);
     label.SetWindowText(timeLabel);
 
@@ -581,8 +580,9 @@ void CODINDlg::UpdateStatus(bool bInit)
     if (fBytesProcessed > 0) {
       __int64 totalTime = (ddTimeDifference * nnBytesTotal + (fBytesProcessed>>1)) / fBytesProcessed;
       __int64 timeLeft = totalTime - ddTimeDifference;
-      CTimeSpan remainingTime(0, 0, 0, (int)timeLeft);
-      timeLabel = remainingTime.Format(L"%H:%M:%S");
+      DWORD dwTimeLeft = (DWORD) timeLeft;
+      timeLabel.Format(L"%02u:%02u:%02u", dwTimeLeft/3600, dwTimeLeft % 3600 / 60, dwTimeLeft % 60);
+
       label = GetDlgItem(IDC_LABEL_TIME_LEFT);
       label.SetWindowText(timeLabel);
     }
@@ -863,6 +863,7 @@ int CODINDlg::CheckConditionsForRestorePartition(const wstring& fileName, const 
     res = AtlMessageBox(m_hWnd, IDS_NORESTORETOWINDOWS, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
     res = IDCANCEL;
   }
+
   return res;
 }
 
@@ -960,7 +961,8 @@ void CODINDlg::ReadImageFileInformation()
     imageStream.Open(fileName.c_str(), IImageStream::forReading);
     const size_t BUFSIZE=80;
     wchar_t buffer[BUFSIZE];
-    WTL::CString creationTimeStr;
+    wchar_t creationDateStr[BUFSIZE];
+    wchar_t creationTimeStr[BUFSIZE];
     imageStream.ReadImageFileHeader(false);
     // get comment
     LPCWSTR comment = imageStream.GetComment();
@@ -975,14 +977,19 @@ void CODINDlg::ReadImageFileInformation()
     if ( finder.FindFile (fileName.c_str()))
     {
       FILETIME creationDate;
+	    SYSTEMTIME stUTC, stLocal;
+
       BOOL ok = finder.GetCreationTime(&creationDate);
       if (ok) {
-        CTime ct(creationDate);
-        creationTimeStr = ct.Format( L"%c");
+	      // Convert the last-write time to local time.
+        FileTimeToSystemTime(&creationDate, &stUTC);
+        SystemTimeToTzSpecificLocalTime(NULL, &stUTC, &stLocal);
+        GetDateFormat(LOCALE_USER_DEFAULT, DATE_SHORTDATE, &stLocal, NULL,  creationDateStr, BUFSIZE);
+        GetTimeFormat(LOCALE_USER_DEFAULT, 0, &stLocal, NULL,  creationTimeStr, BUFSIZE);
       }
     }
     finder.Close();
-    text.Format(IDS_HEADERTEMPLATE, creationTimeStr, buffer, comment);
+    text.Format(IDS_HEADERTEMPLATE, creationDateStr, creationTimeStr, buffer, comment);
     verifyButton.EnableWindow(TRUE);
   } catch (EWinException& e) {
     if (e.GetErrorCode() == EWinException::fileOpenError) {
@@ -1100,8 +1107,8 @@ LRESULT CODINDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	SetIcon(hIconSmall, FALSE);
 
   drive.LoadStringW(IDS_DRIVE);
-  name.LoadStringW(IDS_SIZE);
-  size.LoadStringW(IDS_NAME);
+  name.LoadStringW(IDS_NAME);
+  size.LoadStringW(IDS_SIZE);
   type.LoadStringW(IDS_TYPE);
   fVolumeList = GetDlgItem(IDC_LIST_VOLUMES);
   fVolumeList.AddColumn(drive, 0);

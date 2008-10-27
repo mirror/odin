@@ -49,7 +49,7 @@ public:
 
 	virtual DWORD Execute() = 0;
 
-  DWORD GetThreadId() const
+    DWORD GetThreadId() const
 	{
 		return m_dwThreadId;
 	}

@@ -24,7 +24,7 @@
 #include "stdafx.h"
 #include <atldlgs.h>
 #include <atlctrls.h>
-#include <atlstr.h>
+#include <atlmisc.h>
 #include "OptionsDlg.h"
 
 COptionsDlg::COptionsDlg(COdinManager& odinManager)
@@ -175,8 +175,10 @@ unsigned __int64 COptionsDlg::GetChunkSizeNumber()
 {
   CEdit editSplitSize ( GetDlgItem(IDC_ED_CHUNK_SIZE) );
   unsigned __int64 splitChunkSize;
-  ATL::CString s;
-  editSplitSize.GetWindowTextW(s);
+  WTL::CString s;
+  LPWSTR buf = s.GetBuffer(100);
+  editSplitSize.GetWindowTextW(buf);
+  s.ReleaseBuffer();
   splitChunkSize  = _wtol(s) * 1024Ui64 * 1024Ui64;
   return splitChunkSize;
 }

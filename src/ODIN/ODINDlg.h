@@ -30,7 +30,9 @@
 #include "resource.h"
 #include <list>
 #include <string>
+#ifndef _WTL_SUPPORT_SDK_ATL3
 #include <atltime.h>
+#endif
 // #include <atlddx.h>
 #include <atlmisc.h>
 #include <atlctrls.h>
@@ -80,8 +82,6 @@ private:
   __int64 fSourceSize;
   __int64 fMaxTargetSize;
   __int64 fBytesProcessed;
-  CTimeSpan fTimeElapsed;
-  CTimeSpan fTimeLeft;
   unsigned fSpeed; // bytes per second of write speed
   unsigned fThreadCount; // number of threads in use
   UINT fTimer;

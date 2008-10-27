@@ -29,7 +29,7 @@
 //---------------------------------------------------------------------------
 
 #include <list>
-#include <atlsync.h>
+#include "sync.h"
 
 //---------------------------------------------------------------------------
 #define SIZE_NOT_SET 0xFFFFFFFF
@@ -115,6 +115,7 @@ namespace ATL
   class CEvent;
 };
 
+using namespace ATL;
 class CImageBuffer {
   public:
      CImageBuffer(LPCWSTR name=NULL);
@@ -128,8 +129,8 @@ class CImageBuffer {
   private:
     std::list<CBufferChunk*> fChunks;
     unsigned fChunkCount;         // Must be power of two
-    ATL::CCriticalSection fCritSec;
-    ATL::CSemaphore fSemaListHasElems;
+    CCriticalSection fCritSec;
+    CSemaphore fSemaListHasElems;
     std::wstring fName;
 };  // class CImageBuffer
 //---------------------------------------------------------------------------
