@@ -101,7 +101,11 @@ void CAboutDlg::GetVersionFromResource()
   LPWSTR fileEntry = L"\\StringFileInfo\\040904B0\\FileVersion"; // L"FILEVERSION"
   int i1, i2, i3, i4;
 
+#ifdef _WTL_SUPPORT_SDK_ATL3
+  HMODULE hRes =_Module.GetResourceInstance();
+#else
   HMODULE hRes = ATL::_AtlBaseModule.GetResourceInstance();
+#endif
   HRSRC hVersion = FindResource(hRes, MAKEINTRESOURCE(VS_VERSION_INFO), RT_VERSION);
   if (hVersion != NULL)
   {

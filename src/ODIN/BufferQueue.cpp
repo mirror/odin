@@ -26,7 +26,7 @@
 #include <sstream>
 #include <string>
 #include <math.h>
-#include <atlsync.h>
+#include "sync.h"
 #include "BufferQueue.h"
 #include "InternalException.h"
 
