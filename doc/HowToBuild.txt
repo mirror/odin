@@ -1,0 +1,32 @@
+Build Instructions:
+-------------------
+
+1)
+Download and Install MS Visual C++ 2008 Express Editions
+
+2)
+Download ATL 3.0 (from older Platform SDKs or DDKs,it is no longer part of Platform SDk 2008)
+to e.g. c:\devtools\atl30
+
+3)
+Download WTL 8.0 from http://sourceforge.net/project/showfiles.php?group_id=109071 and install e.g. to 
+c:\devtools\wtl80
+Open in wtl directory in subdirectory AppWiz file setup80x.js, replace all occurences of "8" with "9" and save file as setup90x.js
+double click setup90x.js
+
+4)
+Download and install HTML Help Workshop from http://www.microsoft.com/downloads/details.aspx?FamilyID=00535334-c8a6-452f-9aa0-d597d16580cc&displaylang=en
+Download htmlDocs.zip and htmlhelp.exe. Install htmlhelp.exe in the proposed directory.
+Optional: Unzip the files htmldocs.zip to a sub directory doc in the HTML Help WorkShop install dir
+
+5)
+Open VC28008Express, open project odin.sln 
+Right click ODIN and select Properties, change box in upper left corner to "All Configurations"
+open tree on the left hand side and navigate to Configuration Properties-C/C++-General. Add the directories to "Additional Include Directories": c:\devtools\wtl80\include;c:\devtools\atl30 (adjust to your dirs from step 2 and 3). 
+Navigate to Configuration Properties-Resources General. Add the directories to "Additional Include Directories": c:\devtools\wtl80\include.
+close dialog, right-click on ODINTest and repeate these settings 
+
+
+
+
+
