@@ -267,6 +267,7 @@ private:
   unsigned __int64 fBytesUsed;  // number of used bytes in partition
   CompressedRunLengthStreamReader* fAllocMapReader;
   bool               fKnownPartitionType;
+  bool               fWasLocked; // true if volume could be locked succesfully
   BYTE               fPartitionType; // indicator of partition type (FAT16, FAT32, NTFS, ...)
   unsigned           fExtraOffset; // number of extra sectors to be saved before partition bitmap starts
   int                fContainedVolumeCount; // number of contained partitions in a physical disk

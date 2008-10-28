@@ -44,6 +44,7 @@
 #define IDS_DRIVE                       165
 #define IDS_SIZE                        166
 #define IDS_NAME                        167
+#define IDS_REBOOTAFTERRESTOREDISK      168
 #define IDD_DIALOG_SETTINGS             201
 #define IDD_ODIN_MAIN                   202
 #define IDD_OPTIONS                     204

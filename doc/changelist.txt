@@ -1,0 +1,16 @@
+version 0.11
+=============
+
+Bug fixes:
+ - Crash when partition is saved to a network drive
+ - Avoid saving "Browse..." entry if no file is contained in the file combo box
+
+Changes:
+ - Add warning to reboot system after a restore of a complete disk (sometimes not recognized)
+ - If restore volume fails do not try to unlock disk (exception as disk was not locked)
+ - use generated build number in version info
+
+
+Version 0.1
+============================================
+initial release to the public

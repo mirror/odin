@@ -760,9 +760,10 @@ int CODINDlg::CheckConditionsForSavePartition(const wstring& fileName, int index
   // check if file size of image possibly exceeds 4GB limit on FAT32:
   GetDriveFromFileName(fileName, targetDrive);
   int targetIndex = fOdinManager.GetDriveList()->GetIndexOfDrive(targetDrive.c_str());
-  bool isFAT = fOdinManager.GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT32 ||
+  bool isFAT = targetIndex >= 0 && 
+              (fOdinManager.GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT32 ||
                fOdinManager.GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT32_XINT13 ||
-               fOdinManager.GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT_16;
+               fOdinManager.GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT_16);
   if (isFAT && bytesToSave > (2i64<<32)-1 && fOdinManager.GetSplitSize() == 0) {
     res = AtlMessageBox(m_hWnd, IDS_4GBLIMITEXCEEDED, IDS_WARNING, MB_ICONEXCLAMATION | MB_YESNO);
     if (res != IDYES)
@@ -862,6 +863,11 @@ int CODINDlg::CheckConditionsForRestorePartition(const wstring& fileName, const 
   if (sysDrive.compare(targetDrive) == 0) {
     res = AtlMessageBox(m_hWnd, IDS_NORESTORETOWINDOWS, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
     res = IDCANCEL;
+  }
+
+  // warn user to reboot system if a complete disk is restored
+  if (fOdinManager.GetDriveInfo(index)->IsCompleteHardDisk()) {
+    res = AtlMessageBox(m_hWnd, IDS_REBOOTAFTERRESTOREDISK, IDS_WARNING, MB_ICONEXCLAMATION | MB_OK);
   }
 
   return res;
@@ -1350,7 +1356,9 @@ LRESULT CODINDlg::OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
   wstring fileName;
   CComboBox comboFiles(GetDlgItem(IDC_COMBO_FILES));
   ReadWindowText(comboFiles, fileName);
-  fLastImageFile = fileName;
+	int index = comboFiles.GetCurSel();
+	if (index > 0) // do not save Browse... label
+    fLastImageFile = fileName;
   return 0;
 }
 
