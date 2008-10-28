@@ -343,6 +343,7 @@ CDiskImageStream::CDiskImageStream()
   fPosition = 0;
   fContainedVolumeCount = 0;
   fSubVolumeLocker = NULL;
+  fWasLocked = false;
 }
 
 CDiskImageStream::~CDiskImageStream()
@@ -424,6 +425,7 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
     CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_LOCK_VOLUME");
     res = DeviceIoControl(fHandle, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
     CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_DISMOUNT_VOLUME");
+    fWasLocked = true;
     if (!isRawDisk) { // does not work for raw disks in Win XP, no problem in Vista
       res = DeviceIoControl(fHandle, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0, &dummy, NULL);
       if (res == 0)
@@ -442,7 +444,7 @@ void CDiskImageStream::Close()
   
   // close handle and unlock volume
   if (fHandle != NULL && fHandle != INVALID_HANDLE_VALUE) {
-    if (fOpenMode==forWriting) {
+    if (fOpenMode==forWriting && fWasLocked) {
       DWORD res, dummy;
       res = DeviceIoControl(fHandle, FSCTL_UNLOCK_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
       CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_UNLOCK_VOLUME");
@@ -486,7 +488,7 @@ void CDiskImageStream::Read(void * buffer, unsigned nLength, unsigned *nbytesRea
 
   bSuccess = ReadFile(fHandle, buffer, nLength, &nbytesReadTemp, NULL) != FALSE;
   CHECK_OS_EX_PARAM1(bSuccess, EWinException::readVolumeError, fName.c_str());
-  ATLTRACE("Read(): read bytes expected: %u, read: %u\n", nLength, nbytesReadTemp);
+  //ATLTRACE("Read(): read bytes expected: %u, read: %u\n", nLength, nbytesReadTemp);
   
   fPosition += nbytesReadTemp;
   *nbytesRead = nbytesReadTemp;
