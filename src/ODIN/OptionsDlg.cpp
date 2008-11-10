@@ -176,8 +176,9 @@ unsigned __int64 COptionsDlg::GetChunkSizeNumber()
   CEdit editSplitSize ( GetDlgItem(IDC_ED_CHUNK_SIZE) );
   unsigned __int64 splitChunkSize;
   WTL::CString s;
-  LPWSTR buf = s.GetBuffer(100);
-  editSplitSize.GetWindowTextW(buf);
+  const int cBufferLen = 100;
+  LPWSTR buf = s.GetBuffer(cBufferLen);
+  editSplitSize.GetWindowText(buf, cBufferLen);
   s.ReleaseBuffer();
   splitChunkSize  = _wtol(s) * 1024Ui64 * 1024Ui64;
   return splitChunkSize;
