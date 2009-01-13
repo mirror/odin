@@ -352,6 +352,52 @@ CDiskImageStream::~CDiskImageStream()
   delete fAllocMapReader;
 }
 
+void CDiskImageStream::ReadDriveLayout()
+{
+  // http://groups.google.com/group/microsoft.public.development.device.drivers/browse_thread/thread/3a52aa64b3845135
+    DWORD dummy, res;
+    // allocate buffer that is large enough
+    DWORD bufferSize = 100 * sizeof(PARTITION_INFORMATION_EX) + sizeof(DRIVE_LAYOUT_INFORMATION_EX);
+    BYTE* buffer = new BYTE [bufferSize];
+    res = DeviceIoControl(fHandle, IOCTL_DISK_GET_DRIVE_LAYOUT_EX, NULL, 0, buffer, bufferSize, &dummy, NULL);
+    CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_DRIVE_LAYOUT_EX");
+    if (((DRIVE_LAYOUT_INFORMATION_EX*) buffer)->PartitionStyle !=  PARTITION_STYLE_MBR)
+      ATLTRACE("ReadDriveLayout partition style %x not supported \n", ((DRIVE_LAYOUT_INFORMATION_EX*) buffer)->PartitionStyle);
+    ATLTRACE("ReadDriveLayout found the following partitions:\n");
+    PARTITION_INFORMATION_EX* partInfo = &(((DRIVE_LAYOUT_INFORMATION_EX*) buffer)->PartitionEntry[0]);
+    unsigned partitionCount = ((DRIVE_LAYOUT_INFORMATION_EX*) buffer)->PartitionCount;
+    ATLTRACE("ReadDriveLayout number of partitions found: %d \n", partitionCount);
+    for (unsigned i=0; i<partitionCount; i++) {
+      ATLTRACE("Partition[%u]\n", i);
+      ATLTRACE("  style       : %u\n", partInfo[i].PartitionStyle);
+      ATLTRACE("  start offset: %I64u\n", partInfo[i].StartingOffset);
+      ATLTRACE("  length      : %I64u\n", partInfo[i].PartitionLength);
+      ATLTRACE("  number      : %u\n", partInfo[i].PartitionNumber);
+      ATLTRACE("  rewrite     : %u\n", partInfo[i].RewritePartition);
+      ATLTRACE("  type        : %x\n", (unsigned) partInfo[i].Mbr.PartitionType);
+      ATLTRACE("  boot indicator: %u\n", (unsigned) partInfo[i].Mbr.BootIndicator);
+      ATLTRACE("  recognized    : %u\n", (unsigned) partInfo[i].Mbr.RecognizedPartition);
+      ATLTRACE("  hidden sectors:   : %u\n", partInfo[i].Mbr.HiddenSectors);
+    }
+    delete buffer;
+}
+
+long CDiskImageStream::OpenDevice(DWORD shareMode)
+{
+  long ntStatus;
+  DWORD access = (fOpenMode==forWriting) ? (GENERIC_READ | GENERIC_WRITE | SYNCHRONIZE) : GENERIC_READ| SYNCHRONIZE;
+  ATLTRACE("Opening raw disk device: %S.\n", fName.c_str());
+  ntStatus = NTOpen(&fHandle, fName.c_str(), access, FILE_ATTRIBUTE_NORMAL, shareMode, FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT|FILE_RANDOM_ACCESS|FILE_NON_DIRECTORY_FILE);
+  return ntStatus;
+}
+
+void CDiskImageStream::CloseDevice()
+{
+  DWORD res = CloseHandle(fHandle);  
+  CHECK_OS_EX_INFO(res, EWinException::closeHandleError)
+  fHandle = NULL;
+}
+
 void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
 { 
   PARTITION_INFORMATION_EX partInfo;
@@ -360,7 +406,7 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
   DWORD dummy, res;
   long ntStatus;
   bool isRawDisk;
-  DWORD access, shareMode, options;
+  DWORD shareMode, options;
   
   fName = name;
   fOpenMode = mode;
@@ -368,21 +414,23 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
   options = FILE_SYNCHRONOUS_IO_NONALERT | FILE_RANDOM_ACCESS | FILE_NON_DIRECTORY_FILE;
   if (isRawDisk) {
     shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
-    access     = (mode==forWriting) ? (GENERIC_READ | GENERIC_WRITE | SYNCHRONIZE) : GENERIC_READ| SYNCHRONIZE;
-    ntStatus = NTOpen(&fHandle, fName.c_str(), access, FILE_ATTRIBUTE_NORMAL, shareMode, FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT|FILE_RANDOM_ACCESS|FILE_NON_DIRECTORY_FILE);
+    ntStatus = OpenDevice(shareMode);
     CHECK_KERNEL_EX_HANDLE_PARAM1(ntStatus, EWinException::volumeOpenError, fName.c_str());
+    ATLTRACE("Opened raw disk device: %S with handle %u\n", name, fHandle);
     if (fContainedVolumeCount > 0) {
       std::wstring rootName = fName.substr(0, fName.length() - 1);
       fSubVolumeLocker = new CSubVolumeLocker(rootName.c_str(), fContainedVolumeCount);
     }
+    ReadDriveLayout();
   } else {
-    access     = (mode==forWriting) ? (GENERIC_READ | GENERIC_WRITE | SYNCHRONIZE) : GENERIC_READ| SYNCHRONIZE;
-// best before odintest
-    // shareMode  = (mode==forWriting) ? 0 : FILE_SHARE_READ;
-// for odintest
     shareMode  = (mode==forWriting) ? 0 : FILE_SHARE_WRITE;
-
-    ntStatus = NTOpen(&fHandle, fName.c_str(), access, FILE_ATTRIBUTE_NORMAL, shareMode, FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT|FILE_RANDOM_ACCESS|FILE_NON_DIRECTORY_FILE);
+    ntStatus = OpenDevice(shareMode);
+    if (0 != ntStatus) {
+      Sleep(1000);
+      // sometimes on a disk with 3 partitions this calls fails on the 3rd partition...(?)
+      // just try again after a little pause
+      ntStatus = OpenDevice(shareMode);
+    }
     CHECK_KERNEL_EX_HANDLE_PARAM1(ntStatus, EWinException::volumeOpenError, fName.c_str());
   }
 
@@ -436,6 +484,8 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
 
 void CDiskImageStream::Close()
 {
+  DWORD res, dummy;
+  NTFS_VOLUME_DATA_BUFFER volData;
   // if it is a physical disk unlock all contained volumes
   if (fSubVolumeLocker) {
     delete fSubVolumeLocker;
@@ -445,14 +495,28 @@ void CDiskImageStream::Close()
   // close handle and unlock volume
   if (fHandle != NULL && fHandle != INVALID_HANDLE_VALUE) {
     if (fOpenMode==forWriting && fWasLocked) {
-      DWORD res, dummy;
+      // inform Windows to reload and remount the drives
+      res = DeviceIoControl(fHandle, IOCTL_DISK_UPDATE_PROPERTIES, NULL, 0, NULL, 0, &dummy, NULL);
+      CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_UPDATE_PROPERTIES");
       res = DeviceIoControl(fHandle, FSCTL_UNLOCK_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
       CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_UNLOCK_VOLUME");
+      ATLTRACE("Closed raw disk device: %S with handle %u\n", fName.c_str(), fHandle);
     }
 
-    int res = CloseHandle(fHandle);  
-    CHECK_OS_EX_INFO(res, EWinException::closeHandleError);
-    fHandle = NULL;
+    CloseDevice();
+/*
+    // resize partition if necessary and supported (we must close device first and then open again otherwise it fails)
+    // only supported on NTFS not on FAT
+    OpenDevice(0);
+    ZeroMemory(&volData, sizeof(volData));
+    res = DeviceIoControl(fHandle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, 0, &volData, sizeof(volData), &dummy, NULL);
+    LONGLONG newVolSize = fSize / fBytesPerSector;
+    if (res && volData.NumberSectors.QuadPart != newVolSize) {
+      res = DeviceIoControl(fHandle, FSCTL_EXTEND_VOLUME, &newVolSize, sizeof(newVolSize), NULL, 0, &dummy, NULL);
+      // CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_EXTEND_VOLUME");
+    }
+    CloseDevice();
+*/
   }
 }
 
@@ -731,18 +795,24 @@ CSubVolumeLocker::CSubVolumeLocker(LPCWSTR rootName, int containedVolumes) {
 }
   
 CSubVolumeLocker::~CSubVolumeLocker() {
-  for (int i=0; i<fSize; i++)
+  // for (int i=0; i<fSize; i++)
+  for (int i=fSize-1; i>=0; i--)
     CloseAndUnlockVolume(i);
   delete [] fHandles;
 }
 
 void CSubVolumeLocker::OpenAndLockVolume(LPCWSTR volName, int index) {
-  DWORD res, access, ntStatus, dummy;
+  DWORD res, access, dummy;
+  long ntStatus;
   HANDLE h;
 
   access     = GENERIC_READ | GENERIC_WRITE | SYNCHRONIZE;
-  ntStatus = NTOpen(&h, volName, access, FILE_ATTRIBUTE_NORMAL, 0, FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT|FILE_RANDOM_ACCESS|FILE_NON_DIRECTORY_FILE);
-  CHECK_KERNEL_EX_HANDLE_PARAM1((int)ntStatus, EWinException::volumeOpenError, volName);
+  DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+
+  ATLTRACE("Opening sub volume: %S.\n", volName);
+  ntStatus = NTOpen(&h, volName, access, FILE_ATTRIBUTE_NORMAL, shareMode, FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT|FILE_RANDOM_ACCESS|FILE_NON_DIRECTORY_FILE);
+  CHECK_KERNEL_EX_HANDLE_PARAM1(ntStatus, EWinException::volumeOpenError, volName);
+  ATLTRACE("Opened  sub volume: %S with handle %u\n", volName, h);
   fHandles[index] = h;
   res = DeviceIoControl(h, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
   CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_LOCK_VOLUME");
@@ -754,10 +824,14 @@ void CSubVolumeLocker::CloseAndUnlockVolume(int index) {
   HANDLE h = fHandles[index];
   if (h != NULL && h != INVALID_HANDLE_VALUE) {
       DWORD res, dummy;
+      // res = DeviceIoControl(h, IOCTL_VOLUME_ONLINE, NULL, 0, NULL, 0, &dummy, NULL);
+      // CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_VOLUME_ONLINE");
       res = DeviceIoControl(h, FSCTL_UNLOCK_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
       CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_UNLOCK_VOLUME");
       res = CloseHandle(h);  
       CHECK_OS_EX_INFO(res, EWinException::closeHandleError);
+      ATLTRACE("Closed sub volume  with handle %u\n", h);
+
   }
 }
 

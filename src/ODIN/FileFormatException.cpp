@@ -39,6 +39,7 @@ LPCWSTR EFileFormatException::sMessages[] = {
   L"The method to calculate the checksum is unknown", // wrongChecksumMethod, 
   L"The compression method is unknown", // wrongCompressionMethod,
   L"The method to store information about cluster usage is unknown", // wrongVolumeEncodingMethod,
+  L"The file has an unexpected file size.", // wrongFileSizeError
 };
 
 

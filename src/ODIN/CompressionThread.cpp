@@ -129,6 +129,14 @@ void  CCompressionThread::CompressLoopZlib()
         THROWEX(EZLibCompressionException, ret);
       }
     }
+    if (fCancel) {
+      if (compressChunk)
+        fTargetQueueCompressed->ReleaseChunk(compressChunk);
+      if (readChunk)
+        fTargetQueueDecompressed->ReleaseChunk(readChunk);
+      deflateEnd(&zStream);
+      Terminate(-1);  // terminate thread after releasing buffer and before acquiring next one
+    }
   } 
   
   ret = deflateEnd(&zStream);
@@ -186,6 +194,15 @@ void CCompressionThread::CommpressLoopLibz2()
         ATLTRACE("Error in bzip2 compressing data, error code: %d\n", ret);
         THROWEX(EBZip2CompressionException, ret);
       }
+    }
+
+    if (fCancel) {
+      BZ2_bzCompressEnd(&bzsStream);
+      if (compressChunk)
+        fTargetQueueCompressed->ReleaseChunk(compressChunk);
+      if (readChunk)
+        fTargetQueueDecompressed->ReleaseChunk(readChunk);
+      Terminate(-1);  // terminate thread after releasing buffer and before acquiring next one
     }
   } 
   

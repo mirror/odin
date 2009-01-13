@@ -52,6 +52,7 @@ class COptionsDlg : public CDialogImpl<COptionsDlg>
  		COMMAND_ID_HANDLER(IDOK, OnOK)
 		COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
     COMMAND_HANDLER(IDC_BT_USED_BLOCKS, BN_CLICKED, OnBnClickedBtUsedBlocks)
+    COMMAND_HANDLER(IDC_BT_SNAPSHOT, BN_CLICKED, OnBnClickedBtVSSSnapshot)
   END_MSG_MAP()
 
 private:
@@ -60,15 +61,16 @@ private:
   void UpdateSetSplitFileMode();
   void UpdateGetCompressionMode();
   void UpdateSetCompressionMode();
-  void UpdateGetOnlyUsedBlocksMode();
-  void UpdateSetOnlyUsedBlocksMode();
+  void UpdateGetSaveMode();
+  void UpdateSetSaveMode();
+
   unsigned __int64 GetChunkSizeNumber();
 
   COdinManager& fOdinManager;
   TCompressionFormat fCompressionMode;
   bool fSplitFiles;
-  bool fSaveOnlyUsedBlocks;
-  // track changes if something was changed
+  typedef enum { modeOnlyUsedBlock, modeUsedBlocksAndSnapshot, modeAllBlocks } TBackupMode;
+  TBackupMode fBackupMode;
   bool fOptionWasChanged;
 
 public:
@@ -82,4 +84,5 @@ public:
   LRESULT OnOK(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
   LRESULT OnCancel(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
   LRESULT OnBnClickedBtUsedBlocks(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+  LRESULT OnBnClickedBtVSSSnapshot(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 };

@@ -221,6 +221,7 @@ class CDiskImageStream: public IImageStream
   virtual void SetCompletedInformation(DWORD crc32, unsigned __int64 processedBytes);
 
   unsigned __int64 StoreVolumeBitmap(unsigned int chunkSize, HANDLE hOutHandle, LPCWSTR fileName);
+  void CDiskImageStream::ReadDriveLayout();
 
   void SetContainedSubPartitionsCount(int containedVolumeCount) {
     fContainedVolumeCount = containedVolumeCount;
@@ -253,6 +254,8 @@ class CDiskImageStream: public IImageStream
 private:
 
   // methods:
+  long OpenDevice(DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE);
+  void CloseDevice();
   void CalculateFATExtraOffset();
   void  CheckFileSystem();
 

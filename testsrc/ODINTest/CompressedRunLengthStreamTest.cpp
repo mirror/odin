@@ -46,10 +46,11 @@ CompressedRunLengthStreamTest::~CompressedRunLengthStreamTest()
 {
   if (!sWasDeleted) {
     sWasDeleted = true;
-    DeleteFile(fileName1);
-    DeleteFile(fileName2);
-    DeleteFile(fileName3);
-    DeleteFile(fileName4);
+    BOOL ok;
+    ok = DeleteFile(fileName1);
+    ok = DeleteFile(fileName2);
+    ok = DeleteFile(fileName3);
+    ok = DeleteFile(fileName4);
   }
 }
 
@@ -242,6 +243,7 @@ void CompressedRunLengthStreamTest::ContinueSequenceTest()
   for (int i=0; i<sizeof(expected2); i++)
     CPPUNIT_ASSERT(in[i] == expected2[i]);
   delete[] in;
+  CloseHandle(h);
 }
 
 void CompressedRunLengthStreamTest::ReaderTest1() {

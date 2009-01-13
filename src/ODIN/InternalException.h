@@ -36,7 +36,8 @@ class EInternalException : public Exception
   public:
   typedef enum ExceptionCode {volumeBitmapBufferSizeError, ext2GroupDescrReadError, ext2BlockGroupReadError,
     threadSyncTimeout, inputTypeNotSet, outputTypeNotSet, getChunkError, writeChunkError, wrongReadSize,
-    wrongWriteSize, internalStringTableOverflow, chunkSizeTooSmall,
+    wrongWriteSize, internalStringTableOverflow, chunkSizeTooSmall, maxPartitionNumberExceeded,
+    unsupportedPartitionFormat,
   };
   
   EInternalException(int errCode) : 

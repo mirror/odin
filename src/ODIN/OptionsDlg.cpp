@@ -26,6 +26,7 @@
 #include <atlctrls.h>
 #include <atlmisc.h>
 #include "OptionsDlg.h"
+#include "VSSWrapper.h"
 
 COptionsDlg::COptionsDlg(COdinManager& odinManager)
   : fOdinManager(odinManager)
@@ -41,7 +42,7 @@ void COptionsDlg::Init()
 {
   UpdateGetSplitFileMode();
   UpdateGetCompressionMode();
-  UpdateGetOnlyUsedBlocksMode();
+  UpdateGetSaveMode();
 }
 
 void COptionsDlg::Commit()
@@ -49,7 +50,7 @@ void COptionsDlg::Commit()
   if (fOptionWasChanged) {
     UpdateSetSplitFileMode();
     UpdateSetCompressionMode();
-    UpdateSetOnlyUsedBlocksMode();
+    UpdateSetSaveMode();
   }
 }
 
@@ -143,32 +144,57 @@ void COptionsDlg::UpdateSetCompressionMode()
    fOdinManager.SetCompressionMode(fCompressionMode);
 }
 
-void COptionsDlg::UpdateGetOnlyUsedBlocksMode()
+void COptionsDlg::UpdateGetSaveMode()
 {
   CButton saveAllBlocksButton( GetDlgItem(IDC_BT_ALL_BLOCKS) );
   CButton saveOnlyUsedBlocksButton( GetDlgItem(IDC_BT_USED_BLOCKS) );
+  CButton snapshotButton( GetDlgItem(IDC_BT_SNAPSHOT) );
 
   // get save mode
-  fSaveOnlyUsedBlocks = fOdinManager.GetSaveOnlyUsedBlocksOption();
-  if (fSaveOnlyUsedBlocks) {
-    saveAllBlocksButton.SetCheck(BST_UNCHECKED);
-    saveOnlyUsedBlocksButton.SetCheck(BST_CHECKED);
+  bool saveOnlyUsedBlocks = fOdinManager.GetSaveOnlyUsedBlocksOption();
+  bool makeSnapshot = fOdinManager.GetTakeSnapshotOption();
+  if (saveOnlyUsedBlocks) {
+    if (makeSnapshot) {
+        saveAllBlocksButton.SetCheck(BST_UNCHECKED);
+        saveOnlyUsedBlocksButton.SetCheck(BST_UNCHECKED);
+        snapshotButton.SetCheck(BST_CHECKED);
+     } else {
+        saveAllBlocksButton.SetCheck(BST_UNCHECKED);
+        saveOnlyUsedBlocksButton.SetCheck(BST_CHECKED);
+        snapshotButton.SetCheck(BST_UNCHECKED);
+     }
   } else {
     saveAllBlocksButton.SetCheck(BST_CHECKED);
     saveOnlyUsedBlocksButton.SetCheck(BST_UNCHECKED);
+    snapshotButton.SetCheck(BST_UNCHECKED);
+  }
+  
+  // disable snapshot option if not available on this platform
+  if (!CVssWrapper::VSSIsSupported()) {
+    snapshotButton.EnableWindow(FALSE);
+    if (makeSnapshot) {
+      saveOnlyUsedBlocksButton.SetCheck(BST_CHECKED);
+      snapshotButton.SetCheck(BST_UNCHECKED);
+    }
   }
 }
 
-void COptionsDlg::UpdateSetOnlyUsedBlocksMode()
+void COptionsDlg::UpdateSetSaveMode()
 {
   CButton saveAllBlocksButton( GetDlgItem(IDC_BT_ALL_BLOCKS) );
   CButton saveOnlyUsedBlocksButton( GetDlgItem(IDC_BT_USED_BLOCKS) );
+  CButton snapshotButton( GetDlgItem(IDC_BT_SNAPSHOT) );
 
-  ATLASSERT(saveAllBlocksButton.GetCheck() != saveOnlyUsedBlocksButton.GetCheck());
-  if (saveOnlyUsedBlocksButton.GetCheck() == BST_CHECKED)
+  if (saveOnlyUsedBlocksButton.GetCheck() == BST_CHECKED) {
     fOdinManager.SetSaveOnlyUsedBlocksOption(true);
-  else
+    fOdinManager.SetTakeSnapshotOption(false);
+  } else if (snapshotButton.GetCheck() == BST_CHECKED ) {
+    fOdinManager.SetSaveOnlyUsedBlocksOption(true);
+    fOdinManager.SetTakeSnapshotOption(true);
+  } else {
     fOdinManager.SetSaveOnlyUsedBlocksOption(false);
+    fOdinManager.SetTakeSnapshotOption(false);
+  }
 }
 
 unsigned __int64 COptionsDlg::GetChunkSizeNumber()
@@ -238,6 +264,11 @@ LRESULT COptionsDlg::OnBnClickedBtSplitChunk(WORD /*wNotifyCode*/, WORD /*wID*/,
   return 0;
 }
 
+LRESULT COptionsDlg::OnBnClickedBtVSSSnapshot(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+  fOptionWasChanged = true;
+  return 0;
+}
 
 LRESULT COptionsDlg::OnOK(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {

@@ -30,9 +30,6 @@ using namespace std;
 // Registers the fixture into the 'registry'
 CPPUNIT_TEST_SUITE_REGISTRATION( ConfigTest );
 
-static const wchar_t iniFileName[] = L"UnitTest.ini";
-static bool sInit = CfgFileInitialize(iniFileName);
-
 IMPL_SECTION(ConfigTest, L"UnitTestSection1")
 
 void ConfigTest::setUp()
@@ -166,16 +163,20 @@ void ConfigTest::CfgNamedTest4() {
 
 void ConfigTest::TableOverflowTest()
 {
-  wchar_t longString[1200];
-  for (int i=0; i < (sizeof(longString)/sizeof(longString[0])); i++)
+  wchar_t* longString;
+  size_t len = CConfigEntryStatics::sStringTable.GetCapacity()+10;
+  longString = new wchar_t[len];
+  for (size_t i=0; i < (len*sizeof(wchar_t)/sizeof(longString[0])); i++)
     longString[i] = i%26 + L'a';
-  longString[1199] = L'\0';
+  longString[len-1] = L'\0';
 
   try {
     // must throw an internal exception
     CConfigEntry<int, fruitssection> cfg(longString, 123);
+    delete [] longString;
     CPPUNIT_FAIL("InternalException with error code internalStringTableOverflow was expected.");
   } catch (EInternalException& e) {
+    delete [] longString;
     CPPUNIT_ASSERT(e.GetErrorCode() == EInternalException::internalStringTableOverflow);
   }
 }
@@ -183,7 +184,10 @@ void ConfigTest::TableOverflowTest()
 void ConfigTest::LastTest() 
 {
   BOOL ok;
-  const wchar_t* iniFileName = CConfigEntryStatics::sIni.GetPathName();
-  ok = DeleteFile(iniFileName);
+  ok = CConfigEntryStatics::sIni.DeleteSection(L"Standard");
+  CPPUNIT_ASSERT_EQUAL(ok, TRUE);
+  ok = CConfigEntryStatics::sIni.DeleteSection(ConfigTest::fruitssection);
+  CPPUNIT_ASSERT_EQUAL(ok, TRUE);
+  ok = CConfigEntryStatics::sIni.DeleteSection(ConfigTest::treesection);
   CPPUNIT_ASSERT_EQUAL(ok, TRUE);
 }

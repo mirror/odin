@@ -33,6 +33,9 @@ public:
   // Add a string to a table and return a reference to the location in the store
   // return NULL if no mor space is available
   const wchar_t* AddString(const wchar_t* str);
+  size_t GetCapacity() const {
+    return fCapacity;
+  }
 
 private:
   size_t fSize;

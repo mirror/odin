@@ -68,16 +68,6 @@ DWORD  CDecompressionThread::Execute()
       DecompressLoopLibz2();
 
     fFinished = true;
-/*
-  }  // try
-  catch (Exception &e) {
-    FErrorFlag = true;
-    FErrorMessage = L"Compression thread encountered exception: \"";
-  	FErrorMessage += e.GetMessage();
-	  FErrorMessage += L"\"";
-    FFinished = true;
-	  return -1;
-*/
   } catch (Exception &e) {
     fErrorFlag = true;
     fErrorMessage = L"Compression thread encountered exception: \"";
@@ -128,7 +118,16 @@ void CDecompressionThread::DecompressLoopZlib()
     if (ret < 0) {
       ATLTRACE("Error in gzip compressing data, error code: %d\n", ret);
       THROWEX(EZLibCompressionException, ret);
-    } 
+    }
+
+    if (fCancel) {
+      if (decompressChunk)
+        fTargetQueueCompressed->ReleaseChunk(decompressChunk);
+      if (readChunk)
+        fTargetQueueDecompressed->ReleaseChunk(readChunk);
+      inflateEnd(&zsStream);
+      Terminate(-1);  // terminate thread after releasing buffer and before acquiring next one
+    }
   } 
   
   ret = inflateEnd(&zsStream);
@@ -182,6 +181,15 @@ void CDecompressionThread::DecompressLoopLibz2()
    ret = BZ2_bzDecompress(&bzStream); 
    if (ret < 0)
      THROWEX(EBZip2CompressionException, ret);
+
+    if (fCancel) {
+      BZ2_bzDecompressEnd(&bzStream);
+      if (decompressChunk)
+        fTargetQueueCompressed->ReleaseChunk(decompressChunk);
+      if (readChunk)
+        fTargetQueueDecompressed->ReleaseChunk(readChunk);
+      Terminate(-1);  // terminate thread after releasing buffer and before acquiring next one
+    }
   } 
   
   ret = BZ2_bzDecompressEnd(&bzStream);

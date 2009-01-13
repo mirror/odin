@@ -33,7 +33,7 @@ class COdinThread : public CThread
   public:
     COdinThread(DWORD dwCreationFlags = 0)
       : CThread(dwCreationFlags) { 
-		fFinished = fErrorFlag = false;
+		fFinished = fErrorFlag = fCancel = false;
     fBytesProcessed = fCrc32 = 0;
 	}
 
@@ -57,12 +57,23 @@ class COdinThread : public CThread
 		return fErrorMessage.c_str();
 	};
 
+  // indicate the thread to terminate itself as soon as there is a clean state
+  // e.g. all resources are frees etc.
+  void CancelThread() {
+    fCancel = true;
+  }
+
+  // return a boolean indicating that the thread was terminated to request from outside.
+  bool WasCancelled() const {
+    return fCancel;
+  }
 
   protected:
 
   __int64 fBytesProcessed;
   bool    fFinished;
   bool    fErrorFlag;
+  bool    fCancel;
   std::wstring fErrorMessage;
   DWORD   fCrc32;
 }; 

@@ -33,72 +33,91 @@ enum TDeviceType { driveFixed, driveRemovable, driveFloppy, driveUnknown };
 //---------------------------------------------------------------------------
 class CDriveInfo {
   public:
-   CDriveInfo(std::wstring displayName, std::wstring deviceName, std::wstring mountPoint, bool isDisk, int containedVolumes = 0);
+   CDriveInfo(
+     const std::wstring& displayName, 
+     const std::wstring& deviceName, 
+     const std::wstring& mountPoint, 
+     bool isDisk);
 
-   std::wstring  GetDisplayName () {
+   const std::wstring& GetDisplayName () const {
 		 return fDisplayName;
 	 }
      
-	 std::wstring  GetDeviceName() {
+	 const std::wstring& GetDeviceName() const {
 		 return fDeviceName;
 	 }
 
-   std::wstring GetMountPoint() {
+   const std::wstring& GetMountPoint() const {
 		 return fMountPoint;
 	 }
 
-   TDeviceType GetDriveType() {
+   TDeviceType GetDriveType() const {
 		 return fDriveType;
 	 }
 
-   __int64 GetBytes() {
+   __int64 GetBytes() const {
 		return fBytes;
 	 }
      
-	 __int64 GetSectors() { 
+	 __int64 GetSectors() const { 
 		 return fSectors;
 	 }
 
-   int GetBytesPerSector() {
+   int GetBytesPerSector() const {
 		 return fBytesPerSector;
 	 }
 
-   int  GetSectorsPerTrack(){
+   int  GetSectorsPerTrack() const {
 		 return fSectorsPerTrack;
 	 }
 
-   unsigned __int64 GetUsedSize() {
+   unsigned __int64 GetUsedSize() const {
      return fUsedBytes;
    }
 
-   DWORD GetClusterSize() {
+   DWORD GetClusterSize() const {
      return fClusterSize;
    }
      
-   int GetPartitionType() {
+   int GetPartitionType() const {
      return fPartitionType;
    }
 
-   bool IsKnownType() {
+   unsigned GetDiskNumber();
+
+   bool IsKnownType() const {
      return fKnownType;
    }
 
-   bool IsReadable() {
+   bool IsReadable() const {
 		 return fReadable;
 	 }
 
-   bool IsWritable() {
+   bool IsWritable() const {
 		 return fWritable;
 	 }
 
+   // if it is a disk set number of contained partitions
+   void SetContainedVolumes(int volumeCount) {
+     fContainedVolumes = volumeCount;
+   }
+
    // if it is a disk returns number of contained partitions, if ist is partition returns 0
-   int GetContainedVolumes() {
+   int GetContainedVolumes() const {
      return fContainedVolumes;
    }
 
    // returns true if it is a hard disk, returns false if it is a partition
-   bool IsCompleteHardDisk() {
+   bool IsCompleteHardDisk() const {
      return fIsDisk;
+   }
+
+   void SetParent(CDriveInfo* pParent) {
+     fParent = pParent;
+   }
+
+   const CDriveInfo* GetParent() const {
+     return fParent;
    }
 
    void Refresh(void);
@@ -117,6 +136,7 @@ class CDriveInfo {
     bool fKnownType;
     int fContainedVolumes; // number of volumes contained in a physical disk
     bool fIsDisk;           // true: is a complete hard disk, false: is a partition
+    CDriveInfo* fParent;   // parent object e.g. hard disk of a partition
 };
 
 #include <vector>
@@ -133,18 +153,25 @@ class CDriveList {
   
   public:
 
-	CDriveInfo *GetItem(int index)
+	CDriveInfo *GetItem(int index) const
 	{
 		return  fDriveList[index]; 
 	}
 
-  size_t GetCount(void) 
+  size_t GetCount(void) const
 	{ 
 		return fDriveList.size(); 
 	}
 
   // return index of list for given drive letter or -1 if not found
   int GetIndexOfDrive(LPCWSTR drive) const;
+
+  // return index of list for given device name or -1 if not found
+  int GetIndexOfDeviceName(const std::wstring& deviceName) const;
+
+  // fill the array pVolumes with all contained volumes of pDriveInfo, pDriveInfo must point to
+  // a harddisk device otherwise the function does nothing, return the number of found volumes
+  int GetVolumes(const CDriveInfo* pDriveInfo, CDriveInfo** pVolumes, int volumeCount) const;
 };
 //---------------------------------------------------------------------------
 #endif

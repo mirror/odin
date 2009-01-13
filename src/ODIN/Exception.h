@@ -36,8 +36,8 @@
 class Exception
 {
 public:
-  const static int cNoExceptionTypes = 4;
-  typedef enum ExceptionCategory {OSException, CompressionException, InternalException, FileFormatException };
+  const static int cNoExceptionTypes = 5;
+  typedef enum ExceptionCategory {OSException, CompressionException, InternalException, FileFormatException, VSSException };
 
   Exception(ExceptionCategory cat)
     : fCategory(cat)
@@ -79,6 +79,8 @@ private:
 
 protected:
   std::wstring fMessage;
+
+  void ExpandParameters(const wchar_t** params, int len);
 
 private:
   int fCategory;

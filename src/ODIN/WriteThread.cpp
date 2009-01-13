@@ -59,9 +59,10 @@ CWriteThread::CWriteThread(IImageStream *writeStore, CImageBuffer *sourceQueue, 
 //---------------------------------------------------------------------------
 // Main execute method for the thread.
 //
-DWORD  CWriteThread:: Execute()
+DWORD  CWriteThread::Execute()
 {
   SetName("WriteThread");
+  ATLTRACE("CWriteThread created,  thread: %d, name: Write-Thread\n", GetCurrentThreadId());
   try {
     if (fVerifyOnly) {
       WriteLoopVerify();
@@ -71,6 +72,7 @@ DWORD  CWriteThread:: Execute()
       else
         WriteLoopSimple();
     }
+    ATLTRACE("CWriteThread has finished,  thread: %d, name: Write-Thread\n", GetCurrentThreadId());
     return S_OK;
   } catch (Exception &e) {
     fErrorFlag = true;
@@ -142,6 +144,8 @@ void CWriteThread::WriteLoopRunLength()
          bool eof = chunk->IsEOF();
          chunk->Reset();
          fTargetQueue->ReleaseChunk(chunk);
+         if (fCancel)
+           Terminate(-1);  // terminate thread after releasing buffer and before acquiring next one
          if (!eof) {
           chunk = fSourceQueue->GetChunk(); // may block
           remainingBufferSize = chunk->GetSize();
@@ -199,6 +203,8 @@ void CWriteThread::WriteLoopSimple()
       
       ReadChunk->Reset();
       fTargetQueue->ReleaseChunk(ReadChunk);
+      if (fCancel)
+        Terminate(-1);  // terminate thread after releasing buffer and before acquiring next one
     }  // while (!EOF)
     ATLTRACE("Write thread number of bytes written totally: %u\n", (DWORD) fBytesProcessed);
     ATLTRACE("Write thread CRC32 is: %u\n", crc32.GetResult());
@@ -227,6 +233,8 @@ void CWriteThread::WriteLoopVerify()
       crc32.AddDataBlock((BYTE*)(ReadChunk->GetData()), nWriteCount);      
       ReadChunk->Reset();
       fTargetQueue->ReleaseChunk(ReadChunk);
+      if (fCancel)
+         Terminate(-1);  // terminate thread after releasing buffer and before acquiring next one
     }  // while (!EOF)
     ATLTRACE("Write thread number of bytes written totally: %u\n", (DWORD) fBytesProcessed);
     fCrc32 = crc32.GetResult();

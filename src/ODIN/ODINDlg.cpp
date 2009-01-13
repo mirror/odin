@@ -33,6 +33,7 @@
 #include <atlctrls.h>
 #include <atlctrlx.h>
 #include <sstream>
+#include <algorithm>
 //#include <atlmisc.h>
 #include "ODINDlg.h"
 #include "DriveList.h"
@@ -45,6 +46,7 @@
 #include "CompressedRunLengthStream.h"
 #include "OSException.h"
 #include "ImageStream.h"
+#include "PartitionInfoMgr.h"
 #include "OptionsDlg.h"
 
 using namespace std;
@@ -56,7 +58,6 @@ using namespace std;
 
 // section name in .ini file for configuration values
 IMPL_SECTION(CODINDlg, L"MainWindow")
-
 /////////////////////////////////////////////////////////////////////////////
 //
 // class CODINSplitManagerCallback
@@ -104,6 +105,25 @@ int CODINSplitManagerCallback::AskUserForMissingFile(LPCWSTR missingFileName, un
   return res;
 }
 
+void CODINSplitManagerCallback::RemoveTrailingNumberFromFileName(wstring& fileName)
+{
+  const int noTrailingDigits = 4; // name is generated in the form c:\Folder\NameNNNN.ext n=4
+
+
+  int lastDotPos = fileName.rfind(L'.');
+  if (lastDotPos < 0)
+    lastDotPos = fileName.length();
+  
+  if ( fileName[lastDotPos-1] >= L'0' && fileName[lastDotPos-1] <= L'9'&& 
+       fileName[lastDotPos-2] >= L'0' && fileName[lastDotPos-2] <= L'9'&& 
+       fileName[lastDotPos-3] >= L'0' && fileName[lastDotPos-3] <= L'9'&& 
+       fileName[lastDotPos-4] >= L'0' && fileName[lastDotPos-4] <= L'9' ) {
+    wstring baseName = fileName.substr(0, lastDotPos-4);
+    baseName +=fileName.substr(lastDotPos, fileName.length());
+    fileName = baseName;
+  }
+}
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -121,7 +141,8 @@ CODINDlg::CODINDlg()
   fColumn3Width(L"VolumeColumn3Width", 80),
   fSplitCB(m_hWnd),
   fVerifyRun(false),
-  fTimer(0)
+  fTimer(0),
+  fWasCancelled(false)
 {
   fMode = fLastOperationWasBackup ? modeBackup : modeRestore;
 }
@@ -196,6 +217,10 @@ void CODINDlg::InitControls()
   WTL::CString dlgTitle;
   dlgTitle.LoadString(IDS_DIALOGTITLE);
   SetWindowText(dlgTitle);
+
+  if (!fStatusBar.IsWindow())
+    fStatusBar.Create(this->m_hWnd);
+   
 }
 
 // fill the control with the list view with all available drives 
@@ -321,124 +346,148 @@ int CODINDlg::GetImageIndexAndUpdateImageList (LPCWSTR drive)
 
 void CODINDlg::BrowseFiles(WORD wID)
 {
-	CComboBox combo(GetDlgItem(wID)); 
+  CComboBox combo(GetDlgItem(wID)); 
 	int index = combo.GetCurSel();
-  SaveComment();
+  ReadCommentFromDialog();
 
 	if (index == 0)
 	{
-		LPCTSTR sSelectedFile;
-    WTL::CString fileDescr, defaultExt;
-    defaultExt.LoadString(IDS_DEFAULTEXT);
-    fileDescr.LoadString(IDS_FILEDESCR);
-    // replace separator chars from resource string
-    int len = fileDescr.GetLength();
-    for (int i=0; i<len; i++)
-      if (fileDescr[i] == L'|')
-        fileDescr.SetAt(i, L'\0');
-    // open file dialog
-		CFileDialog fileDlg ( fMode == modeRestore, defaultExt, NULL,
-      fMode == modeRestore ? OFN_FILEMUSTEXIST|OFN_HIDEREADONLY : OFN_HIDEREADONLY, fileDescr);
-		 
-	  if ( IDOK == fileDlg.DoModal() )
-	  {
-		  sSelectedFile = fileDlg.m_szFileName;
-		  index = combo.FindString(0, sSelectedFile);
-		  if (CB_ERR == index)
-		  {
-			  index = combo.AddString(sSelectedFile);
-			  fFiles.push_back(sSelectedFile);
-
-		  }
-		  combo.SetCurSel(index);
-      UpdateFileInfoBoxAndResetProgressControls();
-	  }
+		BrowseFilesWithFileOpenDialog();
 	}
 }
 
-
-bool CODINDlg::CheckUniqueFileName(LPCTSTR path, bool useConfirmMessage)
+void CODINDlg::BrowseFilesWithFileOpenDialog()
 {
-	wstring filePattern(path);
-  wstring dir;
-  WIN32_FIND_DATA res;
-	HANDLE h;
-	list<wstring> files;
-  list <wstring>::iterator itBegin, itEnd;
-  int off=0, count = 0, msgRes;
-  bool success = true;
+  CComboBox combo(GetDlgItem(IDC_COMBO_FILES)); 
+  LPCTSTR sSelectedFile;
+  WTL::CString fileDescr, defaultExt;
+  defaultExt.LoadString(IDS_DEFAULTEXT);
+  fileDescr.LoadString(IDS_FILEDESCR);
+  // replace separator chars from resource string
+  int len = fileDescr.GetLength();
+  for (int i=0; i<len; i++)
+    if (fileDescr[i] == L'|')
+      fileDescr.SetAt(i, L'\0');
+  // open file dialog
+	CFileDialog fileDlg ( fMode == modeRestore, defaultExt, NULL,
+    fMode == modeRestore ? OFN_FILEMUSTEXIST|OFN_HIDEREADONLY : OFN_HIDEREADONLY, fileDescr);
+	 
+  if ( IDOK == fileDlg.DoModal() ) {
+	  sSelectedFile = fileDlg.m_szFileName;
+	  int index = combo.FindString(0, sSelectedFile);
+	  if (CB_ERR == index) {
+		  index = combo.AddString(sSelectedFile);
+		  fFiles.push_back(sSelectedFile);
+	  }
+	  combo.SetCurSel(index);
+    UpdateFileInfoBoxAndResetProgressControls();
+  }
+}
 
+void CODINDlg::GetSplitFilePattern(LPCWSTR path, wstring& filePattern)
+{
+  wstring dir;
+  int off;
+  int count = 0;
+
+  filePattern = path;
   fSplitCB.GetFileName(0, filePattern);
   off = filePattern.rfind(L'\\');
   if (off != string::npos)
     dir = filePattern.substr(0, off+1);
-  off=0;
   // count number of '0'
-  off = filePattern.find(L'0', 0);
+  off = filePattern.find(L'0', off);
   while (filePattern.find(L'0', off+count) != string::npos)
     ++count;
   filePattern = filePattern.replace(off, count, count, L'?');
+}
 
-	count = 0;
-  h = FindFirstFile(filePattern.c_str(), &res);
-	if (h == INVALID_HANDLE_VALUE) 
+void CODINDlg::GetEntireDiskFilePattern(LPCWSTR path, wstring& filePattern)
+{
+  wstring dir;
+  int off;
+  int count = 0;
+
+  filePattern = path;
+  off = filePattern.rfind(L'\\');
+  if (off == string::npos)
+    off = 0;
+  
+  // find '0'
+  off = filePattern.find_first_of(L"0123456789", off);
+  filePattern = filePattern.replace(off, string::npos, 1, L'*');
+}
+
+bool CODINDlg::CheckUniqueFileName(LPCWSTR path, LPCWSTR filePattern, bool useConfirmMessage)
+{
+  wstring dir(path);
+  WIN32_FIND_DATA res;
+  HANDLE h;
+  int msgRes;
+  list<wstring> files;
+  list <wstring>::iterator itBegin, itEnd;
+  bool success = true;
+  int off, count = 0;
+
+  off = dir.rfind(L'\\');
+  if (off != string::npos)
+    dir = dir.substr(0, off+1);
+  else
+    dir.clear();
+
+  h = FindFirstFile(filePattern, &res);
+  if (h == INVALID_HANDLE_VALUE) 
     return true;
-	else 
-	{
+  else {
     files.push_back(res.cFileName);
-		++count;
-		while ( FindNextFile(h, &res) )
-		{
+    ++count;
+    while ( FindNextFile(h, &res) ) {
       files.push_back(res.cFileName);
 		  ++count;
-		}
-		FindClose(h);
+    }
+    FindClose(h);
 
-		if (count > 0)
-		{
+    if (count > 0) {
       if (useConfirmMessage) {
         wostringstream msg;
         WTL::CString prefix, postfix;
                    
-				prefix.Format(IDS_ASK_DELETE_FILES, dir.c_str(), count);
+        prefix.Format(IDS_ASK_DELETE_FILES, dir.c_str(), count);
         postfix.LoadString(IDS_ASK_CONTINUE);
 
-		    msg << (LPCWSTR)prefix << endl;
-		    int displayCount = min(10, count);
-		    itBegin = files.begin();
-		    for (int i=0; i<displayCount; i++)
-		    {
-			    msg << *itBegin++ << endl;
-		    }
-		    if (count > displayCount)
-			    msg << _T("...") << endl;
-		    msg << (LPCWSTR)postfix << endl;
-  		  msgRes = AtlMessageBox(m_hWnd, msg.str().c_str(), IDS_WARNING, MB_ICONEXCLAMATION | MB_OKCANCEL);
+        msg << (LPCWSTR)prefix << endl;
+        int displayCount = min(10, count);
+        itBegin = files.begin();
+        for (int i=0; i<displayCount; i++)
+        {
+          msg << *itBegin++ << endl;
+        }
+        if (count > displayCount)
+          msg << _T("...") << endl;
+        msg << (LPCWSTR)postfix << endl;
+        msgRes = AtlMessageBox(m_hWnd, msg.str().c_str(), IDS_WARNING, MB_ICONEXCLAMATION | MB_OKCANCEL);
       } else {
         msgRes = IDOK;
       }
 
-		  if (msgRes == IDOK)
-		  {
-			  // delete files in list
-			  for (itBegin = files.begin(), itEnd = files.end(); itBegin != itEnd && success; itBegin++)
-			  {
-				  wstring file = dir + (*itBegin).c_str();
-				  success = DeleteFile(file.c_str()) != FALSE;
-				  if (!success)
-				  {
+      if (msgRes == IDOK) {
+        // delete files in list
+        for (itBegin = files.begin(), itEnd = files.end(); itBegin != itEnd && success; itBegin++)
+        {
+          wstring file = dir + (*itBegin).c_str();
+          success = DeleteFile(file.c_str()) != FALSE;
+          if (!success) {
             WTL::CString msg;
-					  msg.Format(IDS_CANNOTDELETEFILE, file.c_str());
-					  AtlMessageBox(m_hWnd, (LPCWSTR)msg, IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
-					  break;
-				  }
-			  }
+            msg.Format(IDS_CANNOTDELETEFILE, file.c_str());
+			AtlMessageBox(m_hWnd, (LPCWSTR)msg, IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
+			break;
 		  }
-		  else
-			  success = false;
-		}
-	}    
-	return success;
+        }
+      } else
+        success = false;
+      }
+  }    
+  return success;
 }
 
 void CODINDlg::WaitUntilDone()
@@ -462,7 +511,7 @@ void CODINDlg::WaitUntilDone()
         //ATLTRACE(" Total Bytes written: %lu\n", m_allThreads[1]->GetBytesWritten());
         //ATLTRACE(" Total Bytes read: %lu\n", m_allThreads[0]->GetBytesRead());
         bool wasVerifyRun = fVerifyRun; // will be deleted in DeleteProcessingInfo()!
-        DeleteProcessingInfo(); // work is finished
+        DeleteProcessingInfo(fWasCancelled); // work is finished
         if (wasVerifyRun) {
           CheckVerifyResult();
           fVerifyRun = false;
@@ -492,10 +541,11 @@ void CODINDlg::WaitUntilDone()
   ATLTRACE("Wait until done exited.\n");
 }
 
-void CODINDlg::DeleteProcessingInfo()
+void CODINDlg::DeleteProcessingInfo(bool wasCancelled)
 {
   wstring msgCopy;
   LPCWSTR msg = fOdinManager.GetErrorMessage();
+  CString statusText;
    
   KillTimer(fTimer);
   fTimer = 0;
@@ -504,12 +554,17 @@ void CODINDlg::DeleteProcessingInfo()
   if (msg != NULL)
     msgCopy = msg;
 
-  fOdinManager.Terminate();
+  fOdinManager.Terminate(wasCancelled);
 
   if (msg != NULL)
     	AtlMessageBox(m_hWnd, msgCopy.c_str(), IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
 
   Init();
+  if (wasCancelled)
+    statusText.LoadStringW(IDS_STATUS_OPERATION_CANCELLED);
+  else
+    statusText.LoadString(IDS_STATUS_OPERATION_COMPLETED);
+  fStatusBar.SetWindowTextW(statusText);
 
   if (::IsWindow(m_hWnd)) {   // may be destroyed if user pressed Cancel button
     EnableControlsAfterProcessingComplete();
@@ -747,7 +802,7 @@ int CODINDlg::CheckConditionsForSavePartition(const wstring& fileName, int index
 
   unsigned __int64 bytesToSave = fOdinManager.GetDriveInfo(index)->GetUsedSize();
   if (bytesToSave == 0)
-    fOdinManager.GetDriveInfo(index)->GetBytes();
+    bytesToSave = fOdinManager.GetDriveInfo(index)->GetBytes();
 
 
   if (freeBytesAvailable < bytesToSave) {
@@ -762,6 +817,9 @@ int CODINDlg::CheckConditionsForSavePartition(const wstring& fileName, int index
   int targetIndex = fOdinManager.GetDriveList()->GetIndexOfDrive(targetDrive.c_str());
   bool isFAT = targetIndex >= 0 && 
               (fOdinManager.GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT32 ||
+               fOdinManager.GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_HUGE ||
+               fOdinManager.GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT32_XINT13 ||
+               fOdinManager.GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT_12 ||
                fOdinManager.GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT32_XINT13 ||
                fOdinManager.GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT_16);
   if (isFAT && bytesToSave > (2i64<<32)-1 && fOdinManager.GetSplitSize() == 0) {
@@ -772,23 +830,43 @@ int CODINDlg::CheckConditionsForSavePartition(const wstring& fileName, int index
       res = IDOK;
   }
 
-  // warning: do not youse same drive for source and destination
-  wstring sourceDrive = fOdinManager.GetDriveInfo(index)->GetMountPoint();
-  if (sourceDrive.compare(targetDrive) == 0) {
-    res = AtlMessageBox(m_hWnd, IDS_NOTSAMEDRIVE, IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
-    if (res != IDOK)
-      return res;
+  CDriveInfo* pDriveInfo = fOdinManager.GetDriveList()->GetItem(index);
+  bool isHardDisk = pDriveInfo->IsCompleteHardDisk();
+  CDriveInfo **pContainedVolumes = NULL;
+  int partitionsToSave;
+  wstring volumeFileName;
+  
+  if (isHardDisk) {
+    partitionsToSave = pDriveInfo->GetContainedVolumes();
+    pContainedVolumes = new CDriveInfo* [partitionsToSave];
+    int no = fOdinManager.GetDriveList()->GetVolumes(pDriveInfo, pContainedVolumes, partitionsToSave);
+  } else {
+    partitionsToSave = 1;
+    pContainedVolumes = new CDriveInfo* [1];
+    pContainedVolumes[0] = fOdinManager.GetDriveInfo(index);
+  }
+  
+  for (int i=0; i<partitionsToSave; i++) {
+    // warning: do not use same drive for source and destination
+    wstring sourceDrive = pContainedVolumes[i]->GetMountPoint();
+    if (sourceDrive.compare(targetDrive) == 0) {
+      res = AtlMessageBox(m_hWnd, IDS_NOTSAMEDRIVE, IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
+      if (res != IDOK)
+        return res;
+    }
+
+    // warning: do not backup windows partition
+    wstring sysDir;
+    wchar_t systemDir[MAX_PATH];
+    int count = GetSystemDirectory(systemDir, MAX_PATH);
+    sysDir = systemDir;
+    GetDriveFromFileName(sysDir, targetDrive);
+    if (sourceDrive.compare(targetDrive) == 0 && !fOdinManager.GetTakeSnapshotOption()) {
+      res = AtlMessageBox(m_hWnd, IDS_NOWINDIRBACKUP, IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
+    }
   }
 
-  // warning: do not backup windows partition
-  wstring sysDir;
-  wchar_t systemDir[MAX_PATH];
-  int count = GetSystemDirectory(systemDir, MAX_PATH);
-  sysDir = systemDir;
-  GetDriveFromFileName(sysDir, targetDrive);
-  if (sourceDrive.compare(targetDrive) == 0) {
-    res = AtlMessageBox(m_hWnd, IDS_NOWINDIRBACKUP, IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
-  }
+  delete pContainedVolumes;
 
   // internal implementation limitation: file size of split size must be bigger than fReadBlockSize
   if (fOdinManager.GetSplitSize() > 0 && fOdinManager.GetSplitSize() < fOdinManager.GetReadBlockSize()) {
@@ -804,16 +882,16 @@ int CODINDlg::CheckConditionsForSavePartition(const wstring& fileName, int index
   return res;
 }
 
-int CODINDlg::CheckConditionsForRestorePartition(const wstring& fileName, const std::wstring splitFileName, int index, 
+int CODINDlg::CheckConditionsForRestorePartition(const wstring& fileName, int index, 
      unsigned& noFiles, unsigned __int64& totalSize)
 {
   unsigned __int64 targetPartitionSize, partitionSizeToSave;
   CFileImageStream fileStream;
-  int res;
+  int res = IDOK;
   int volType;
   WTL::CString msgStr;
   wstring openName = fileName;
-
+  
   noFiles = 0;
   totalSize = 0;
   if (index < 0) {
@@ -821,27 +899,73 @@ int CODINDlg::CheckConditionsForRestorePartition(const wstring& fileName, const 
     return IDCANCEL;
   }
 
-  res = CheckConditionsForVerifyPartition(fileName, splitFileName, noFiles, totalSize, volType, &partitionSizeToSave);
-  if (res==IDOK) {
-      
-    // prevent restoring a hard disk to a partition or a partition to a hard disk
-    if ((fOdinManager.GetDriveInfo(index)->IsCompleteHardDisk() && volType != CImageFileHeader::volumeHardDisk) ||
-        (!fOdinManager.GetDriveInfo(index)->IsCompleteHardDisk() && volType != CImageFileHeader::volumePartition)) {
-      AtlMessageBox(m_hWnd, IDS_WRONGPARTITIONTYPE, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
-      res = IDCANCEL;
+  CDriveInfo* pDriveInfo = fOdinManager.GetDriveList()->GetItem(index);
+  bool isMBRFile = TestIsHardDiskImage(fileName.c_str());
+  
+  if (isMBRFile) {
+    // verify conditions for MBR file containing boot loader and partition table information
+    res = CheckConditionsForVerifyMBRFile(fileName.c_str());
+    if (res != IDOK && res != IDYES)
       return res;
+    // check that target is a harddisk too 
+    if (!pDriveInfo->IsCompleteHardDisk()) {
+      AtlMessageBox(m_hWnd, IDS_WRONGPARTITIONTYPE, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
+      return IDCANCEL;
     }
 
-    targetPartitionSize = fOdinManager.GetDriveInfo(index)->GetBytes();
-    if (targetPartitionSize < partitionSizeToSave) {
-      AtlMessageBox(m_hWnd, IDS_IMAGETOOBIG, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
+    // check that source and target size match
+    CPartitionInfoMgr partInfoMgr;
+    wstring mbrFileName(fileName);
+    GenerateFileNameForMBRBackupFile(mbrFileName);
+    partInfoMgr.ReadPartitionInfoFromFile(mbrFileName.c_str());
+
+    if (partInfoMgr.GetDiskSize() > (unsigned __int64) pDriveInfo->GetBytes()) {
+      AtlMessageBox(m_hWnd, IDS_IMAGETOOBIG, IDS_WARNING, MB_ICONEXCLAMATION | MB_OK);
       res = IDCANCEL;
-    }
-    else if (targetPartitionSize > partitionSizeToSave) {
+    } else if (partInfoMgr.GetDiskSize() < (unsigned __int64) pDriveInfo->GetBytes()) {
       res = AtlMessageBox(m_hWnd, IDS_IMAGETOOSMALL, IDS_WARNING, MB_ICONEXCLAMATION | MB_YESNO);
     }
-    else
-      res = IDOK;
+    if (res != IDOK && res != IDYES)
+      return res;
+
+    volType = CImageFileHeader::volumeHardDisk;
+  } else {
+    res = CheckConditionsForVerifyPartition(fileName, volType, &partitionSizeToSave);
+    if (res != IDOK && res != IDYES)
+      return res;
+  }
+
+  // prevent restoring a hard disk to a partition or a partition to a hard disk
+  if (( pDriveInfo->IsCompleteHardDisk() && volType != CImageFileHeader::volumeHardDisk) ||
+      (!pDriveInfo->IsCompleteHardDisk() && volType != CImageFileHeader::volumePartition)) {
+    AtlMessageBox(m_hWnd, IDS_WRONGPARTITIONTYPE, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
+    res = IDCANCEL;
+    return res;
+  }
+
+  if (!isMBRFile) {  
+      targetPartitionSize =  pDriveInfo->GetBytes();
+      if (targetPartitionSize < partitionSizeToSave) {
+        AtlMessageBox(m_hWnd, IDS_IMAGETOOBIG, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
+        res = IDCANCEL;
+      }
+      else if (targetPartitionSize > partitionSizeToSave) {
+        res = AtlMessageBox(m_hWnd, IDS_IMAGETOOSMALL, IDS_WARNING, MB_ICONEXCLAMATION | MB_YESNO);
+      }
+      else
+        res = IDOK; 
+
+      // warning: do not restore to windows partition
+      wstring sysDir, sysDrive;
+      wchar_t systemDir[MAX_PATH];
+      int count = GetSystemDirectory(systemDir, MAX_PATH);
+      sysDir = systemDir;
+      GetDriveFromFileName(sysDir, sysDrive);
+      wstring targetDrive =  pDriveInfo->GetMountPoint();
+      if (sysDrive.compare(targetDrive) == 0 && !fOdinManager.GetTakeSnapshotOption()) {
+        res = AtlMessageBox(m_hWnd, IDS_NORESTORETOWINDOWS, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
+        res = IDCANCEL;
+      }
   }
 
   if (res == IDOK) {
@@ -852,37 +976,34 @@ int CODINDlg::CheckConditionsForRestorePartition(const wstring& fileName, const 
       return res;
   }
   
-
-  // warning: do not restore to windows partition
-  wstring sysDir, sysDrive;
-  wchar_t systemDir[MAX_PATH];
-  int count = GetSystemDirectory(systemDir, MAX_PATH);
-  sysDir = systemDir;
-  GetDriveFromFileName(sysDir, sysDrive);
-  wstring targetDrive = fOdinManager.GetDriveInfo(index)->GetMountPoint();
-  if (sysDrive.compare(targetDrive) == 0) {
-    res = AtlMessageBox(m_hWnd, IDS_NORESTORETOWINDOWS, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
-    res = IDCANCEL;
-  }
-
-  // warn user to reboot system if a complete disk is restored
-  if (fOdinManager.GetDriveInfo(index)->IsCompleteHardDisk()) {
-    res = AtlMessageBox(m_hWnd, IDS_REBOOTAFTERRESTOREDISK, IDS_WARNING, MB_ICONEXCLAMATION | MB_OK);
-  }
-
   return res;
 }
 
-int CODINDlg::CheckConditionsForVerifyPartition(const std::wstring& fileName, const std::wstring splitFileName, 
-  unsigned& noFiles, unsigned __int64& totalSize, int& volType, unsigned __int64* partitionSizeToSave)
+int CODINDlg::CheckConditionsForVerifyMBRFile(const std::wstring& fileName)
+{
+  CPartitionInfoMgr partInfoMgr;
+  wstring mbrFileName(fileName);
+
+  GenerateFileNameForMBRBackupFile(mbrFileName);
+  if (!IsFileReadable(mbrFileName.c_str()))
+    return IDCANCEL;
+
+  if (!partInfoMgr.IsValidFileHeader(mbrFileName.c_str()))
+    return IDCANCEL;
+
+  return IDOK;
+}
+
+int CODINDlg::CheckConditionsForVerifyPartition(const std::wstring& fileName, int& volType, unsigned __int64* partitionSizeToSave)
 {
   CFileImageStream fileStream;
   int res=IDOK;
   WTL::CString msgStr;
   wstring openName = fileName;
-
-  noFiles = 0;
-  totalSize = 0;
+  wstring splitFileName = fileName;
+  fSplitCB.GetFileName(0, splitFileName);
+  unsigned noFiles = 0;
+  unsigned __int64 totalSize = 0;
 
   if (!IsFileReadable(openName.c_str()))
     openName = splitFileName; // try multiple files mode
@@ -908,6 +1029,13 @@ int CODINDlg::CheckConditionsForVerifyPartition(const std::wstring& fileName, co
   fCrc32FromFileHeader = fileStream.GetCrc32Checksum();
   volType = fileStream.GetImageFileHeader().GetVolumeType();
 
+  if (totalSize == 0 || fCrc32FromFileHeader == 0) {
+    // The image is corrupt and was not written completely (this information is stored as last step)
+    WTL::CString msg;
+    msg.Format(IDS_INCOMPLETE_IMAGE, openName.c_str());
+    AtlMessageBox(m_hWnd, (LPCWSTR)msg, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
+    res = IDCANCEL;
+  }
   return res;
 }
 
@@ -927,10 +1055,10 @@ void CODINDlg::UpdateFileInfoBox()
 
 void CODINDlg::EnterCommentModeForEditBox()
 {
-  CButton verifyButton(GetDlgItem(ID_BT_VERIFY));
+  // CButton verifyButton(GetDlgItem(ID_BT_VERIFY));
   CEdit commentTextField(GetDlgItem(IDC_EDIT_FILE));
   commentTextField.SetReadOnly(FALSE);
-  verifyButton.EnableWindow(FALSE);
+  // verifyButton.EnableWindow(FALSE);
   if (fComment.length() == 0) {
     WTL::CString hint;
     hint.LoadString(IDS_ENTERCOMMENT);
@@ -940,7 +1068,7 @@ void CODINDlg::EnterCommentModeForEditBox()
     commentTextField.SetSelAll();
 }
 
-void CODINDlg::SaveComment()
+void CODINDlg::ReadCommentFromDialog()
 {
   CEdit commentTextField(GetDlgItem(IDC_EDIT_FILE));
   // save comment if there is one
@@ -960,10 +1088,17 @@ void CODINDlg::ReadImageFileInformation()
   WTL::CString text;
   CFileImageStream imageStream;
   wstring fileName;
-  CButton verifyButton(GetDlgItem(ID_BT_VERIFY));
+  // CButton verifyButton(GetDlgItem(ID_BT_VERIFY));
 
   ReadWindowText(comboFiles, fileName);
   try {
+    bool isMBRFile = TestIsHardDiskImage(fileName.c_str());
+    if (isMBRFile) {
+      wstring tmpFileName, volumeDeviceName;
+      GenerateDeviceNameForVolume(volumeDeviceName, 0, 1);
+      GenerateFileNameForEntireDiskBackup(tmpFileName, fileName.c_str(), volumeDeviceName);
+      fileName = tmpFileName;
+    }
     imageStream.Open(fileName.c_str(), IImageStream::forReading);
     const size_t BUFSIZE=80;
     wchar_t buffer[BUFSIZE];
@@ -996,14 +1131,14 @@ void CODINDlg::ReadImageFileInformation()
     }
     finder.Close();
     text.Format(IDS_HEADERTEMPLATE, creationDateStr, creationTimeStr, buffer, comment);
-    verifyButton.EnableWindow(TRUE);
+    // verifyButton.EnableWindow(TRUE);
   } catch (EWinException& e) {
     if (e.GetErrorCode() == EWinException::fileOpenError) {
       text.Format(IDS_CANNOTOPENFILE, fileName.c_str());
-      verifyButton.EnableWindow(FALSE);
+      // verifyButton.EnableWindow(FALSE);
     } 
   } catch (Exception& e) {
-    verifyButton.EnableWindow(FALSE);
+    // verifyButton.EnableWindow(FALSE);
     wstring msg = e.GetMessage();
     ATLTRACE("can not open file: %S, error: %S", fileName.c_str(), msg.c_str());  
   }
@@ -1076,14 +1211,314 @@ void CODINDlg::EnableControlsAfterProcessingComplete()
 
 void CODINDlg::CleanupPartiallyWrittenFiles()
 {
+  BOOL ok = TRUE;
+  int index = fVolumeList.GetSelectedIndex();
+  CDriveInfo* pDriveInfo = fOdinManager.GetDriveList()->GetItem(index);
+  bool isHardDisk = pDriveInfo->IsCompleteHardDisk();
   wstring fileName;
   CComboBox comboFiles(GetDlgItem(IDC_COMBO_FILES));
 
   ReadWindowText(comboFiles, fileName);
-  if (fOdinManager.GetSplitSize() > 0) {
-    CheckUniqueFileName(fileName.c_str(), false);
+
+  if (isHardDisk && fOdinManager.GetSaveOnlyUsedBlocksOption()) {
+    wstring mbrFileName, volumeFileName, filePattern;
+    CDriveInfo **pContainedVolumes = NULL;
+    mbrFileName = fileName;
+    GenerateFileNameForMBRBackupFile(mbrFileName);
+    DeleteFile(mbrFileName.c_str());
+
+    int subPartitions = pDriveInfo->GetContainedVolumes();
+    pContainedVolumes = new CDriveInfo* [subPartitions];
+    int res = fOdinManager.GetDriveList()->GetVolumes(pDriveInfo, pContainedVolumes, subPartitions);
+
+    // check  if there are file names in conflict with files created during backup
+    for (int i=0; i<subPartitions; i++) {
+      GenerateFileNameForEntireDiskBackup(volumeFileName, fileName.c_str(), pContainedVolumes[i]->GetDeviceName());
+      GetEntireDiskFilePattern(volumeFileName.c_str(), filePattern);
+      CheckUniqueFileName(volumeFileName.c_str(), filePattern.c_str(), false);
+    }
+    delete [] pContainedVolumes;
   } else {
-    DeleteFile(fileName.c_str());
+    if (fOdinManager.GetSplitSize() > 0) {
+      wstring filePattern;
+      GetSplitFilePattern(fileName.c_str(), filePattern);
+      CheckUniqueFileName(fileName.c_str(), filePattern.c_str(), false);
+    } else {
+      DeleteFile(fileName.c_str());
+    }
+  }
+}
+
+void CODINDlg::GenerateFileNameForMBRBackupFile(wstring &volumeFileName)
+{
+    // generate file name for MBR
+    wstring mbrFileName = volumeFileName;
+    transform(mbrFileName.begin(), mbrFileName.end(), mbrFileName.begin(), tolower);
+    const wstring mbrExt(L".mbr");
+    if (mbrFileName.length()-4  == mbrFileName.rfind(mbrExt))
+      return;
+    
+    mbrFileName = volumeFileName;
+    int pos = mbrFileName.rfind(L'.');
+    if (mbrFileName.length() - pos == 4) {
+      if (mbrFileName.substr(pos) != mbrExt) {
+        mbrFileName = mbrFileName.substr(0, pos);
+        mbrFileName += mbrExt;
+      } 
+    } else {
+        mbrFileName += mbrExt;
+    }
+    volumeFileName = mbrFileName;
+}
+
+void CODINDlg::GenerateDeviceNameForVolume(wstring& volumeFileName, unsigned diskNo, unsigned volumeNo)
+{
+  const int bufSize = 10;
+  wchar_t buffer[bufSize];
+  volumeFileName = L"\\Device\\Harddisk";
+  _ui64tow_s(diskNo, buffer, bufSize, 10);
+  volumeFileName += buffer;
+  volumeFileName += L"\\Partition";
+  _ui64tow_s(volumeNo, buffer, bufSize, 10);
+  volumeFileName += buffer;
+}
+
+bool CODINDlg::TestIsHardDiskImage(const wchar_t* fileName)
+{
+  bool isHardDisk;
+  wstring mbrName(fileName);
+
+  if (mbrName.rfind(L".mbr") != mbrName.length() - 4)
+    GenerateFileNameForMBRBackupFile(mbrName);
+  isHardDisk = IsFileReadable(mbrName.c_str());
+
+/*
+  else if (mbrName.find(L".mbr") == string::npos) {
+    mbrName += L".mbr";
+    isHardDisk = IsFileReadable(mbrName.c_str());
+  }
+  else if (mbrName.rfind(L".img") == mbrName.length() - 4) {
+    mbrName = mbrName.substr(0, mbrName.rfind(L".img"));
+    mbrName += L".mbr";
+    isHardDisk = IsFileReadable(mbrName.c_str());
+  }
+  else
+    isHardDisk = false;
+    */
+  return isHardDisk;
+}
+
+void CODINDlg::GenerateFileNameForEntireDiskBackup(wstring &volumeFileName /*out*/, LPCWSTR imageFileNamePattern, const wstring& partitionDeviceName)
+{
+  wstring tmp(imageFileNamePattern);
+  int pos = partitionDeviceName.rfind(L"Partition");
+  int posDot = tmp.rfind(L'.');
+  if (posDot == string::npos)
+    posDot = tmp.length();
+  wstring ext(tmp.substr(posDot));
+  ext = L".img";
+  volumeFileName = tmp.substr(0, posDot);
+  volumeFileName += L"-";
+  volumeFileName += partitionDeviceName.substr(pos);
+  volumeFileName += ext;
+}
+
+bool CODINDlg::CheckForExistingConflictingFilesSimple(LPCWSTR fileName)
+{
+  bool ok = true;
+  if (fOdinManager.GetSplitSize() > 0) {
+    // check  if there are file names in conflict with files created during backup
+    wstring filePattern;
+    GetSplitFilePattern(fileName, filePattern);
+    ok = CheckUniqueFileName(fileName, filePattern.c_str(), true);
+  } else if (IsFileReadable(fileName)) {
+    ok = DeleteFile(fileName) == TRUE;
+    if (!ok) {
+      WTL::CString msg;
+      msg.Format(IDS_CANNOTDELETEFILE, fileName);
+      AtlMessageBox(m_hWnd, (LPCWSTR)msg, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
+    }
+  }
+  return ok;
+}
+
+bool CODINDlg::CheckForExistingConflictingFilesEntireDisk(LPCWSTR volumeFileName, LPCWSTR fileName)
+{
+  bool ok = true;
+  wstring mbrFileName(fileName);
+  GenerateFileNameForMBRBackupFile(mbrFileName);
+
+  if (IsFileReadable(mbrFileName.c_str())) {
+    WTL::CString msgStr;
+    msgStr.Format(IDS_FILE_EXISTS, mbrFileName.c_str());
+    int res = AtlMessageBox(m_hWnd, (LPCWSTR)msgStr, IDS_WARNING, MB_OKCANCEL);
+    if (res != IDOK)
+      return false;
+    ok = DeleteFile(mbrFileName.c_str()) == TRUE;
+    if (!ok) {
+      WTL::CString msg;
+      msg.Format(IDS_CANNOTDELETEFILE, mbrFileName.c_str());
+      AtlMessageBox(m_hWnd, (LPCWSTR)msg, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
+    }
+  }
+
+  if (ok) {
+    // check  if there are file names in conflict with files created during backup
+    wstring filePattern;
+    GetEntireDiskFilePattern(volumeFileName, filePattern);
+    ok = CheckUniqueFileName(volumeFileName, filePattern.c_str(), true);
+  }
+  return ok;
+}
+
+void CODINDlg::GetNoFilesAndFileSize(LPCWSTR fileName, unsigned& fileCount,  unsigned __int64& fileSize, bool& isEntireDriveImageFile)
+{
+  wstring splitFileName(fileName);
+  fileCount = 0;
+  fileSize = 0;
+
+  fSplitCB.GetFileName(0, splitFileName);
+
+  if (!IsFileReadable(fileName) && IsFileReadable(splitFileName.c_str())) {
+    CFileImageStream fileStream;
+    fileStream.Open(splitFileName.c_str(), IImageStream::forReading);
+    fileStream.ReadImageFileHeader(false);
+    fileCount = fileStream.GetImageFileHeader().GetFileCount();  
+    fileSize = fileStream.GetImageFileHeader().GetFileSize();
+    isEntireDriveImageFile = fileStream.GetImageFileHeader().GetVolumeType() == CImageFileHeader::volumeHardDisk;
+    fileStream.Close();
+  }
+}
+
+void CODINDlg::BackupPartitionOrDisk(int index, LPCWSTR fileName)
+{
+  BOOL ok = TRUE;
+  CDriveInfo* pDriveInfo = fOdinManager.GetDriveList()->GetItem(index);
+  bool isHardDisk = pDriveInfo->IsCompleteHardDisk();
+  CDriveInfo **pContainedVolumes = NULL;
+  wstring volumeFileName;
+
+  if (isHardDisk && fOdinManager.GetSaveOnlyUsedBlocksOption()) {
+    int subPartitions = pDriveInfo->GetContainedVolumes();
+    pContainedVolumes = new CDriveInfo* [subPartitions];
+    int res = fOdinManager.GetDriveList()->GetVolumes(pDriveInfo, pContainedVolumes, subPartitions);
+
+    // check  if there are file names in conflict with files created during backup
+    for (int i=0; i<subPartitions; i++) {
+      GenerateFileNameForEntireDiskBackup(volumeFileName, fileName, pContainedVolumes[i]->GetDeviceName());
+      ok = CheckForExistingConflictingFilesEntireDisk(volumeFileName.c_str(), fileName);
+      if (!ok)
+        break;
+    }
+
+    if (ok) {
+      wstring mbrFileName(fileName);
+      CString statusText;
+      GenerateFileNameForMBRBackupFile(mbrFileName);
+      CPartitionInfoMgr partInfoMgr;
+      partInfoMgr.ReadPartitionInfoFromDisk(pDriveInfo->GetDeviceName().c_str());
+      partInfoMgr.WritePartitionInfoToFile(mbrFileName.c_str());
+
+      DisableControlsWhileProcessing();
+      if (fOdinManager.GetTakeSnapshotOption())  {
+        statusText.LoadString(IDS_STATUS_TAKE_SNAPSHOT);
+        fStatusBar.SetWindowTextW(statusText);
+        fOdinManager.MakeSnapshot(index);
+      }
+
+      for (int i=0; i<subPartitions; i++) {
+        DisableControlsWhileProcessing();
+        GenerateFileNameForEntireDiskBackup(volumeFileName, fileName, pContainedVolumes[i]->GetDeviceName());
+
+        fOdinManager.SavePartition(fOdinManager.GetDriveList()->GetIndexOfDrive(pContainedVolumes[i]->GetMountPoint().c_str()),
+          volumeFileName.c_str(), fOdinManager.GetSplitSize() ? &fSplitCB : NULL);
+        ATLTRACE(L"Found sub-partition: %s\n", pContainedVolumes[i]->GetDisplayName().c_str());
+        statusText.FormatMessageW(IDS_STATUS_BACKUP_DISK_PROGRESS, i, subPartitions);
+        fStatusBar.SetWindowTextW(statusText);
+        WaitUntilDone();
+      }
+
+      delete pContainedVolumes;
+      if (fOdinManager.GetTakeSnapshotOption())
+        fOdinManager.ReleaseSnapshot(false);
+    }
+  } else { // not a complete hard disk, but only a paritition or complete disk but with all blocks
+    ok = CheckForExistingConflictingFilesSimple(fileName);
+    if (ok) {
+      CString statusText;
+      DisableControlsWhileProcessing();
+      // save drive to file
+      fOdinManager.SavePartition(index, fileName, &fSplitCB);
+      statusText.LoadString(isHardDisk ? IDS_STATUS_BACKUP_DISK_PROGRESS: IDS_STATUS_BACKUP_PARTITION_PROGRESS);
+      fStatusBar.SetWindowTextW(statusText);
+      // now wait until all threads are finished, but do not block the UI.
+      WaitUntilDone();
+    }
+  }
+}
+
+void CODINDlg::RestorePartitionOrDisk(int index, LPCWSTR fileName)
+{
+  CDriveInfo* pDriveInfo = fOdinManager.GetDriveList()->GetItem(index); 
+  bool isHardDisk;
+  unsigned fileCount = 0;  
+  unsigned __int64 fileSize = 0;
+  wstring volumeFileName;
+  wstring baseName = fileName;
+  wstring mbrName = fileName;  
+  bool isEntireDriveImagefile;
+  CString statusText;
+
+  // check if this is an .mbr file
+  isHardDisk = TestIsHardDiskImage(fileName);
+  if (isHardDisk) {
+    isEntireDriveImagefile = false;
+  } else {
+    // or a .img file:
+    fSplitCB.RemoveTrailingNumberFromFileName(baseName);
+    GetNoFilesAndFileSize(baseName.c_str(), fileCount, fileSize, isEntireDriveImagefile);
+  }
+
+  if (isHardDisk && !isEntireDriveImagefile) {
+    wstring mbrFileName(fileName);
+    wstring targetDiskDeviceName (pDriveInfo->GetDeviceName());
+    GenerateFileNameForMBRBackupFile(mbrFileName);
+    CPartitionInfoMgr partInfoMgr;
+    DisableControlsWhileProcessing();
+    statusText.LoadString(IDS_STATUS_RESTORE_MBR_PROGRESS);
+    fStatusBar.SetWindowTextW(statusText);
+    partInfoMgr.ReadPartitionInfoFromFile(mbrFileName.c_str());
+    partInfoMgr.MakeWritable();
+    partInfoMgr.WritePartitionInfoToDisk(pDriveInfo->GetDeviceName().c_str());
+    RefreshDriveList();
+    // now get drive info again, because the index might have changed:
+    index = fOdinManager.GetDriveList()->GetIndexOfDeviceName(targetDiskDeviceName);
+    pDriveInfo = fOdinManager.GetDriveList()->GetItem(index);
+
+    unsigned subPartitions = partInfoMgr.GetPartitionCount();
+    unsigned diskNo = pDriveInfo->GetDiskNumber();
+    wstring volumeDeviceName, partitionFileName;
+    for (unsigned i=0; i<subPartitions; i++) {
+      DisableControlsWhileProcessing();
+      GenerateDeviceNameForVolume(volumeDeviceName, diskNo, i+1);
+      GenerateFileNameForEntireDiskBackup(volumeFileName, fileName, volumeDeviceName);
+      ATLTRACE(L"Found sub-partition: %s\n", volumeDeviceName.c_str());
+      int volumeIndex = fOdinManager.GetDriveList()->GetIndexOfDeviceName(volumeDeviceName);
+      fSplitCB.RemoveTrailingNumberFromFileName(volumeFileName);
+      GetNoFilesAndFileSize(volumeFileName.c_str(), fileCount, fileSize, isEntireDriveImagefile);
+      fOdinManager.RestorePartition(volumeFileName.c_str(), volumeIndex, fileCount, fileSize, fileCount>0 ? &fSplitCB : NULL);
+      statusText.FormatMessageW(IDS_STATUS_RESTORE_DISK_PROGRESS, i, subPartitions);
+      fStatusBar.SetWindowTextW(statusText);
+      WaitUntilDone();
+    }
+  } else {
+      DisableControlsWhileProcessing();
+		  // restore file to drive
+      fOdinManager.RestorePartition(baseName.c_str(), index, fileCount, fileSize, &fSplitCB);
+      // now wait until all threads are finished, but do not block the UI.
+      statusText.LoadString(pDriveInfo->IsCompleteHardDisk() ? IDS_STATUS_RESTORE_DISK_PROGRESS : IDS_STATUS_RESTORE_PARTITION_PROGRESS);
+      fStatusBar.SetWindowTextW(statusText);
+      WaitUntilDone();
   }
 }
 
@@ -1176,64 +1611,37 @@ LRESULT CODINDlg::OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& b
 
     UpdateStatus(true);
     fTimer = SetTimer(cTimerId, 1000); 
+    ReadCommentFromDialog();
+    fOdinManager.SetComment(fComment.c_str());
+    fWasCancelled = false;
 
     if (fMode == modeBackup) {
       bool ok = true;
       // check if save possible:
       int res = CheckConditionsForSavePartition(fileName, index);
       if (res == IDOK || res == IDYES) {
-        if (fOdinManager.GetSplitSize() > 0) {
-          // check  if there are file names in conflict with files created during backup
-          ok = CheckUniqueFileName(fileName.c_str(), true);
-        } else if (IsFileReadable(fileName.c_str())) {
-          ok = DeleteFile(fileName.c_str()) == TRUE;
-          if (!ok) {
-            WTL::CString msg;
-				    msg.Format(IDS_CANNOTDELETEFILE, fileName.c_str());
-				    AtlMessageBox(m_hWnd, (LPCWSTR)msg, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
-          }
-        }
-
-        if (ok) {
-          DisableControlsWhileProcessing();
-          SaveComment();
-          fOdinManager.SetComment(fComment.c_str());
-          // save drive to file
-          fOdinManager.SavePartition(index, fileName.c_str(), &fSplitCB);
-        }
-      } else {
-        return 0;
-      }
+        BackupPartitionOrDisk(index, fileName.c_str());
+      } 
 	  } else if (fMode == modeRestore) {
-      wstring splitFileName;
       unsigned noFiles = 0;
       unsigned __int64 totalSize = 0;
-      splitFileName = fileName;
-      fSplitCB.GetFileName(0, splitFileName);
-      int res = CheckConditionsForRestorePartition(fileName, splitFileName, index, noFiles, totalSize);
+      int res = CheckConditionsForRestorePartition(fileName, index, noFiles, totalSize);
       if (res == IDOK || res == IDYES) {
-        DisableControlsWhileProcessing();
-  		  // restore file to drive
-        fOdinManager.RestorePartition(fileName.c_str(), index, noFiles, totalSize, &fSplitCB);
-      } else {
-        return 0;
-      }
-	  } else {
+        RestorePartitionOrDisk(index, fileName.c_str());
+      } 
+    } else {
       ATLTRACE("Internal Error neither backup nor restore state");
       return 0;
     }
-
-    // now wait until all threads are finished, but do not block the UI.
-    WaitUntilDone();
   } catch (Exception& e) {
     wstring msg = e.GetMessage();
     int res = AtlMessageBox(m_hWnd, msg.c_str(), IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
-    DeleteProcessingInfo();
+    DeleteProcessingInfo(true);
   }
   catch (...) {
     // We've encountered an exception sometime before we started the operation, so close down everything
     // as gracefully as we can.
-    DeleteProcessingInfo();
+    DeleteProcessingInfo(true);
     throw;
   }
 
@@ -1246,13 +1654,17 @@ LRESULT CODINDlg::OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOO
   if (fOdinManager.IsRunning()) {
     int res = AtlMessageBox(m_hWnd, IDS_CONFIRMCANCEL, IDS_WARNING, MB_ICONEXCLAMATION | MB_YESNO);
     if (res == IDYES) {
-      DeleteProcessingInfo();
+      fWasCancelled = true;
+      fOdinManager.CancelOperation();
+      /*
+      DeleteProcessingInfo(true);
       ResetProgressControls();
       if (fMode==modeBackup)
         CleanupPartiallyWrittenFiles();
+      */
     }
   } else {
-    DeleteProcessingInfo();
+    DeleteProcessingInfo(true);
     BOOL ok  = EndDialog(wID);
     if (!ok)
       ok = GetLastError();
@@ -1283,7 +1695,7 @@ LRESULT CODINDlg::OnBnClickedRadioRestore(WORD /*wNotifyCode*/, WORD /*wID*/, HW
   if (restoreButton.GetCheck())
     fMode = modeRestore;
   if (fMode != oldMode) {
-    SaveComment();
+    ReadCommentFromDialog();
     UpdateFileInfoBoxAndResetProgressControls();
   }
   return 0;
@@ -1327,7 +1739,7 @@ LRESULT CODINDlg::OnLvnItemchangedListVolumes(int /*idCtrl*/, LPNMHDR pNMHDR, BO
 LRESULT CODINDlg::OnTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
   if (CheckThreadsForErrors()) {
-    DeleteProcessingInfo();
+    DeleteProcessingInfo(true);
     return 0;
   }
 
@@ -1357,7 +1769,7 @@ LRESULT CODINDlg::OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
   CComboBox comboFiles(GetDlgItem(IDC_COMBO_FILES));
   ReadWindowText(comboFiles, fileName);
 	int index = comboFiles.GetCurSel();
-	if (index > 0) // do not save Browse... label
+	if (index != 0) // do not save Browse... label, but save when index is -1
     fLastImageFile = fileName;
   return 0;
 }
@@ -1374,6 +1786,9 @@ LRESULT CODINDlg::OnBnClickedBtVerify(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
   CComboBox comboFiles(GetDlgItem(IDC_COMBO_FILES));
   wstring fileName;
   bHandled = TRUE;
+  bool isEntireDriveImage;
+  bool isHardDisk;
+  int res;
 
   ReadWindowText(comboFiles, fileName);
 
@@ -1383,31 +1798,58 @@ LRESULT CODINDlg::OnBnClickedBtVerify(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
     UpdateStatus(true);
     fTimer = SetTimer(cTimerId, 1000); 
 
-    wstring splitFileName;
     unsigned noFiles = 0;
     unsigned __int64 totalSize = 0;
     int volType;
+    wstring volumeFileName;
+    unsigned subPartitions;
+    CString statusText;
 
-    splitFileName = fileName;
-    fSplitCB.GetFileName(0, splitFileName);
-    int res = CheckConditionsForVerifyPartition(fileName, splitFileName, noFiles, totalSize, volType);
-    if (res == IDOK) {
-      DisableControlsWhileProcessing();
-      fVerifyRun = true;
-		  // restore file to drive
-      fOdinManager.VerifyPartition(fileName.c_str(), noFiles, totalSize, &fSplitCB);
+    isHardDisk = TestIsHardDiskImage(fileName.c_str());
+
+    // verify conditions for MBR file containing boot loader and partition table information
+    if (isHardDisk) {
+      wstring mbrFileName(fileName);
+      res = CheckConditionsForVerifyMBRFile(fileName.c_str());
+      if (res != IDOK && res != IDYES)
+        return res;
+      GenerateFileNameForMBRBackupFile(mbrFileName);
+      CPartitionInfoMgr partInfoMgr;
+      partInfoMgr.ReadPartitionInfoFromFile(mbrFileName.c_str());
+      subPartitions = partInfoMgr.GetPartitionCount();
+    } else {
+      subPartitions = 1;
     }
-    // now wait until all threads are finished, but do not block the UI.
-    WaitUntilDone();
+
+    for (unsigned i=0; i<subPartitions; i++) {
+      if (isHardDisk) {
+        wstring volumeDeviceName;
+        GenerateDeviceNameForVolume(volumeDeviceName, 99 /* dummy value */, i+1);
+        GenerateFileNameForEntireDiskBackup(volumeFileName, fileName.c_str(), volumeDeviceName);
+      }
+      else
+        volumeFileName = fileName;
+      res = CheckConditionsForVerifyPartition(volumeFileName, volType);
+      if (res == IDOK) {
+        DisableControlsWhileProcessing();
+        fVerifyRun = true;
+        fSplitCB.RemoveTrailingNumberFromFileName(volumeFileName);
+        GetNoFilesAndFileSize(volumeFileName.c_str(), noFiles, totalSize, isEntireDriveImage);
+        fOdinManager.VerifyPartition(volumeFileName.c_str(), -1, noFiles, totalSize, &fSplitCB);
+        statusText.LoadString(IDS_STATUS_VERIFY_PROGRESS);
+        fStatusBar.SetWindowText(statusText);
+        WaitUntilDone();
+      }
+    }
   } catch (Exception& e) {
     wstring msg = e.GetMessage();
     int res = AtlMessageBox(m_hWnd, msg.c_str(), IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
-    DeleteProcessingInfo();
+    DeleteProcessingInfo(true);
   }
   catch (...) {
     // We've encountered an exception sometime before we started the operation, so close down everything
     // as gracefully as we can.
-    DeleteProcessingInfo();
+    DeleteProcessingInfo(true);
     throw;
   }
   return 0;
@@ -1420,3 +1862,10 @@ LRESULT CODINDlg::OnBnClickedBtOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND 
 
   return 0;
 }
+
+LRESULT CODINDlg::OnBnClickedBtBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+  BrowseFilesWithFileOpenDialog();
+  return 0;
+}
+

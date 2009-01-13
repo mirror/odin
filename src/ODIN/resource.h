@@ -44,12 +44,12 @@
 #define IDS_DRIVE                       165
 #define IDS_SIZE                        166
 #define IDS_NAME                        167
-#define IDS_REBOOTAFTERRESTOREDISK      168
 #define IDD_DIALOG_SETTINGS             201
 #define IDD_ODIN_MAIN                   202
 #define IDD_OPTIONS                     204
 #define ID_DIALOG_SPLASH                205
 #define IDD_DIALOG_SPLASH               205
+#define IDS_INCOMPLETE_IMAGE            206
 #define IDC_LABEL_BYTES_TOTAL           1009
 #define IDC_TAB_GENERAL                 1010
 #define IDC_TABS_SETTINGS               1011
@@ -84,9 +84,11 @@
 #define IDC_EDIT_FILE                   1046
 #define IDC_CREDITS                     1047
 #define IDC_HYPER                       1048
+#define IDC_BT_SNAPSHOT                 1052
 #define ATL_TYPE                        0x3020
 #define IDS_TYPE                        0x3020
 #define ID_BT_OPTIONS                   57665
+#define ID_BT_BROWSE                    57666
 #define IDS_PARTITION_FAT12             61403
 #define IDS_PARTITION_FAT16             61404
 #define IDS_PARTITION_FAT32             61405
@@ -98,14 +100,22 @@
 #define IDS_DRIVE_TYPE_UNKNOWN          61411
 #define IDS_WAITUPDATEDRIVES            61412
 #define IDS_DIALOGTITLE                 61413
-
+#define IDS_STATUS_OPERATION_COMPLETED  61414
+#define IDS_STATUS_OPERATION_CANCELLED  61415
+#define IDS_STATUS_BACKUP_PARTITION_PROGRESS 61416
+#define IDS_STATUS_RESTORE_PARTITION_PROGRESS 61417
+#define IDS_STATUS_BACKUP_DISK_PROGRESS       61418
+#define IDS_STATUS_RESTORE_DISK_PROGRESS      61419
+#define IDS_STATUS_VERIFY_PROGRESS            61420 
+#define IDS_STATUS_RESTORE_MBR_PROGRESS       61421 
+#define IDS_STATUS_TAKE_SNAPSHOT              61422
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        208
 #define _APS_NEXT_COMMAND_VALUE         32772
-#define _APS_NEXT_CONTROL_VALUE         1052
+#define _APS_NEXT_CONTROL_VALUE         1053
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

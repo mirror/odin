@@ -74,7 +74,7 @@
   } \
 }
 
-// special exception classes for handling compression and decompression errors in libz and bzio2 lib.
+// special exception classes for handling Windows errors 
 class EWinException : public Exception 
 {
   public:
@@ -107,56 +107,55 @@ class EWinException : public Exception
     }
 
  
-    EWinException(int winRetCode, LPCWSTR file, int line, ExceptionCode exCode, const wchar_t* param1)
-      : Exception(OSException, file, line)
-    { 
-      const wchar_t* params[1];
-      params[0] = param1;
-      Init(winRetCode, exCode, params, 1);
-    }
-  
-    EWinException(int winRetCode, LPCWSTR file, int line, ExceptionCode exCode, const wchar_t* param1, const wchar_t* param2) 
-      : Exception(OSException, file, line)
-    { 
-      const wchar_t* params[2];
-      params[0] = param1;
-      params[1] = param2;
-      Init(winRetCode, exCode, params, 2);
-    }
-  
-    EWinException(int winRetCode, LPCWSTR file, int line, ExceptionCode exCode, const wchar_t* param1, const wchar_t* param2, const wchar_t* param3)
-      : Exception(OSException, file, line)
-    { 
-      const wchar_t* params[3];
-      params[0] = param1;
-      params[1] = param2;
-      params[2] = param3;
-      Init(winRetCode, exCode, params, 3);
-    }
-  
-    EWinException(int winRetCode, LPCWSTR file, int line, ExceptionCode exCode, const wchar_t** params, int len)
-      : Exception(OSException, file, line)
-    { 
-      Init(winRetCode, exCode, params, len);
-    }
+  EWinException(int winRetCode, LPCWSTR file, int line, ExceptionCode exCode, const wchar_t* param1)
+    : Exception(OSException, file, line)
+  { 
+    const wchar_t* params[1];
+    params[0] = param1;
+    Init(winRetCode, exCode, params, 1);
+  }
 
-    // with NtStatus for kernel errors
-    EWinException(long ntStatus, LPCWSTR file, int line, ExceptionCode exCode, const wchar_t* param1)
-      : Exception(OSException, file, line)
-    { 
-      const wchar_t* params[1];
-      params[0] = param1;
-      InitKernel(ntStatus, exCode, params, 1);
-    }
+  EWinException(int winRetCode, LPCWSTR file, int line, ExceptionCode exCode, const wchar_t* param1, const wchar_t* param2) 
+    : Exception(OSException, file, line)
+  { 
+    const wchar_t* params[2];
+    params[0] = param1;
+    params[1] = param2;
+    Init(winRetCode, exCode, params, 2);
+  }
+
+  EWinException(int winRetCode, LPCWSTR file, int line, ExceptionCode exCode, const wchar_t* param1, const wchar_t* param2, const wchar_t* param3)
+    : Exception(OSException, file, line)
+  { 
+    const wchar_t* params[3];
+    params[0] = param1;
+    params[1] = param2;
+    params[2] = param3;
+    Init(winRetCode, exCode, params, 3);
+  }
+
+  EWinException(int winRetCode, LPCWSTR file, int line, ExceptionCode exCode, const wchar_t** params, int len)
+    : Exception(OSException, file, line)
+  { 
+    Init(winRetCode, exCode, params, len);
+  }
+
+  // with NtStatus for kernel errors
+  EWinException(long ntStatus, LPCWSTR file, int line, ExceptionCode exCode, const wchar_t* param1)
+    : Exception(OSException, file, line)
+  { 
+    const wchar_t* params[1];
+    params[0] = param1;
+    InitKernel(ntStatus, exCode, params, 1);
+  }
 
   virtual void AppendWindowsMessage();
   void AppendNtStatusMessage();
+  void AppendVSSMessage();
 
   int GetErrorCode() {
-    return fErrorCode;
+   return fErrorCode;
   }
-
-  void ExpandParameters(const wchar_t** params, int len);
 
   private:
 
@@ -180,13 +179,11 @@ class EWinException : public Exception
       AppendNtStatusMessage();
   }
 
+  
   int fErrorCode;
 
   static LPCWSTR sMessages[];
 
 };
-
-// Testing:
-void OSExceptionTest();
 
 #endif

@@ -36,7 +36,7 @@ class EFileFormatException : public Exception
   public:
   typedef enum ExceptionCode {magicByteError, wrongFileOffsetError, wrongCommentLength,
     wrongChecksumLength, majorVersionError, wrongChecksumMethod, wrongCompressionMethod,
-    wrongVolumeEncodingMethod,
+    wrongVolumeEncodingMethod, wrongFileSizeError,
   };
   
   EFileFormatException(int errCode) : 
@@ -54,6 +54,10 @@ class EFileFormatException : public Exception
     }
 
   virtual void BuildMessageString();  
+
+  int GetErrorCode() const {
+    return fErrorCode;
+  }
 
 private:
   int fErrorCode;

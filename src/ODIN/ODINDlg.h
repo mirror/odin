@@ -37,6 +37,7 @@
 #include <atlmisc.h>
 #include <atlctrls.h>
 #include <atlframe.h>
+#include <atlctrlx.h>
 #include "OdinManager.h"
 #include "Config.h"
 #include "DriveList.h"
@@ -53,6 +54,7 @@ public:
   }
   virtual void GetFileName(unsigned fileNo, std::wstring& fileName);
   virtual int AskUserForMissingFile(LPCWSTR missingFileName, unsigned fileNo, std::wstring& newName);
+  void RemoveTrailingNumberFromFileName(wstring& fileName); 
 
   void SetBaseName(LPCWSTR baseName)
   {
@@ -78,6 +80,7 @@ private:
 	TOperationMode fMode;
   CListViewCtrl  fVolumeList;
   WTL::CString fVolumeInfoTemplate;
+  CMultiPaneStatusBarCtrl fStatusBar;
 
   __int64 fSourceSize;
   __int64 fMaxTargetSize;
@@ -89,6 +92,7 @@ private:
   DWORD fCrc32FromFileHeader; // checksum contained in file header of image file 
   bool fVerifyRun; // a check run to verify the result was started
   std::wstring fComment; // a comment stored when backing up a file
+  bool fWasCancelled;
   static const UINT cTimerId = 111;
 
   DECLARE_SECTION()
@@ -107,13 +111,14 @@ private:
   void RefreshDriveList();
   void FillDriveList();
   void BrowseFiles(WORD wID);
+  void BrowseFilesWithFileOpenDialog();
   void MakeByteLabel(unsigned __int64 byteCount, LPWSTR buffer, size_t bufsize);
   void GetPartitionFileSystemString(int partType, WTL::CString& fsString);
   void GetDriveTypeString(TDeviceType driveType, WTL::CString& driveTypeString);
   int GetImageIndexAndUpdateImageList (LPCWSTR drive);
 
   void WaitUntilDone();
-  void DeleteProcessingInfo();
+  void DeleteProcessingInfo(bool wasCancelled);
   bool CheckThreadsForErrors();
   void UpdateStatus(bool bInit);
   void ResetProgressControls();
@@ -121,11 +126,20 @@ private:
   void GetDirFromFileName(const std::wstring& fileName, std::wstring& dir);
   void GetDriveFromFileName(const std::wstring& fileName, std::wstring& drive);
   void GetFreeBytesOfDisk(LPCWSTR dir, unsigned __int64* freeBytesAvailable, unsigned __int64* totalNumberOfBytes);
+  void GetNoFilesAndFileSize(LPCWSTR fileName, unsigned& fileCount,  unsigned __int64& fileSize, bool& isEntireDriveImageFile);
   int CheckConditionsForSavePartition(const std::wstring& fileName, int index);
-  int CheckConditionsForRestorePartition(const std::wstring& fileName, const std::wstring splitFileName, int index,
-    unsigned& noFiles, unsigned __int64& totalSize);
-  int CheckConditionsForVerifyPartition(const std::wstring& fileName, const std::wstring splitFileName, 
-    unsigned& noFiles, unsigned __int64& totalSize, int& volType, unsigned __int64* partitionSizeToSave=NULL);
+  int CheckConditionsForRestorePartition(const std::wstring& fileName, int index, unsigned& noFiles, 
+    unsigned __int64& totalSize);
+  int CheckConditionsForVerifyPartition(const std::wstring& fileName, int& volType, unsigned __int64* partitionSizeToSave=NULL);
+  int CheckConditionsForVerifyMBRFile(const std::wstring& fileName);
+  void GenerateFileNameForEntireDiskBackup(std::wstring &volumeFileName /*out*/, LPCWSTR imageFileNamePattern, const std::wstring& partitionDeviceName);
+  void GenerateFileNameForMBRBackupFile(wstring &volumeFileName);
+  void GenerateDeviceNameForVolume(wstring& volumeFileName, unsigned diskNo, unsigned volumeNo);
+  bool TestIsHardDiskImage(const wchar_t* fileName);
+  bool CheckForExistingConflictingFilesSimple(LPCWSTR fileName);
+  bool CheckForExistingConflictingFilesEntireDisk(LPCWSTR volumeFileName, LPCWSTR fileName);
+  void BackupPartitionOrDisk(int index, LPCWSTR fileName);
+  void RestorePartitionOrDisk(int index, LPCWSTR fileName);
   void ReadWindowText(CWindow& wnd, std::wstring& str) {
     int count;
     WTL::CString s;
@@ -133,19 +147,20 @@ private:
 		wnd.GetWindowText(s.GetBuffer(count), count);
     str = s;
   }
-  bool CheckUniqueFileName(LPCTSTR path, bool useConfirmMessage);
+  bool CheckUniqueFileName(LPCWSTR path, LPCWSTR filePattern, bool useConfirmMessage);
+  void GetSplitFilePattern(LPCWSTR path, wstring& filePattern);
+  void GetEntireDiskFilePattern(LPCWSTR path, wstring& filePattern);
   bool IsFileReadable(LPCWSTR fileName);
   bool IsFileWritable(LPCWSTR fileName);
   void UpdateFileInfoBox();
   void UpdateFileInfoBoxAndResetProgressControls();
   void ReadImageFileInformation();
   void EnterCommentModeForEditBox();
-  void SaveComment();
+  void ReadCommentFromDialog();
   void CheckVerifyResult();
   void DisableControlsWhileProcessing();
   void EnableControlsAfterProcessingComplete();
   void CleanupPartiallyWrittenFiles();
-
 public:
 
 	CODINDlg();
@@ -179,6 +194,7 @@ public:
     COMMAND_HANDLER(IDC_COMBO_FILES, CBN_KILLFOCUS, OnCbnKillfocusComboFiles)
     COMMAND_HANDLER(ID_BT_VERIFY, BN_CLICKED, OnBnClickedBtVerify)
     COMMAND_HANDLER(ID_BT_OPTIONS, BN_CLICKED, OnBnClickedBtOptions)
+    COMMAND_HANDLER(ID_BT_BROWSE, BN_CLICKED, OnBnClickedBtBrowse)
   END_MSG_MAP()
   
 /* does not draw correctly 
@@ -210,4 +226,5 @@ public:
   LRESULT OnCbnKillfocusComboFiles(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
   LRESULT OnBnClickedBtVerify(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
   LRESULT OnBnClickedBtOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+  LRESULT OnBnClickedBtBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 };

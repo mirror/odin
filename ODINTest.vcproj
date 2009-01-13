@@ -48,7 +48,7 @@
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="2"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
+				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="4"
 			/>
 			<Tool
@@ -62,7 +62,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="shlwapi.lib cppunitd.lib"
+				AdditionalDependencies="vssapi.lib shlwapi.lib cppunitd.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)\lib\cppunit-1.12.0\lib&quot;"
 				GenerateDebugInformation="true"
@@ -126,7 +126,7 @@
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="2"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
+				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
 			/>
 			<Tool
@@ -140,7 +140,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="shlwapi.lib cppunit.lib"
+				AdditionalDependencies="vssapi.lib shlwapi.lib cppunit.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(SolutionDir)\lib\cppunit-1.12.0\lib&quot;"
 				GenerateDebugInformation="true"
@@ -246,7 +246,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\OdinManager.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\OSException.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\PartitionInfoMgr.cpp"
 				>
 			</File>
 			<File
@@ -255,10 +263,6 @@
 			</File>
 			<File
 				RelativePath=".\src\ODIN\SplitManager.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\ODIN\SplitManager.h"
 				>
 			</File>
 			<File
@@ -284,6 +288,14 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\VSSException.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\VSSWrapper.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\src\ODIN\WriteThread.cpp"
@@ -368,7 +380,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\PartitionInfoMgr.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\ReadThread.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\SplitManager.h"
 				>
 			</File>
 			<File
@@ -381,6 +401,18 @@
 			</File>
 			<File
 				RelativePath=".\src\ODIN\Thread.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\vsbackup_xp.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\VSSException.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\VSSWrapper.h"
 				>
 			</File>
 			<File
@@ -416,6 +448,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\testsrc\ODINTest\CreateDeleteThread.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\testsrc\ODINTest\CreateDeleteThread.h"
+				>
+			</File>
+			<File
 				RelativePath=".\testsrc\ODINTest\ExceptionTest.cpp"
 				>
 			</File>
@@ -448,10 +488,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\ODIN\OdinManager.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\testsrc\ODINTest\OdinManagerTest.cpp"
 				>
 			</File>
@@ -461,6 +497,14 @@
 			</File>
 			<File
 				RelativePath=".\testsrc\ODINTest\ODINTest.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\testsrc\ODINTest\PartitionInfoMgrTest.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\testsrc\ODINTest\PartitionInfoMgrTest.h"
 				>
 			</File>
 			<File
