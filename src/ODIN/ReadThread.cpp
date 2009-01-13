@@ -77,6 +77,7 @@ DWORD CReadThread::Execute()
         ReadLoopCombined(); 
     }
     fFinished = true;
+    ATLTRACE("CReadThread has finished,  thread: %d, name: Read-Thread\n", GetCurrentThreadId());
     return S_OK;
   } catch (Exception &e) {
     fErrorFlag = true;
@@ -152,6 +153,8 @@ void  CReadThread::ReadLoopCombined(void) // ReadLoopFromPartition(void)
          // release current block, because it is full and get a new block.
          //ATLTRACE("Buffer is full, releasing buffer, bytes written: %d\n", (DWORD) dbgBytesReadTotal);
          fTargetQueue->ReleaseChunk(writeChunk);
+         if (fCancel)
+           Terminate(-1);  // terminate thread after releasing buffer and before acquiring next one
          writeChunk = fSourceQueue->GetChunk(); // may block
          remainingBufferSize = writeChunk->GetSize();
          buffer = (BYTE*)writeChunk->GetData();
@@ -211,6 +214,8 @@ void  CReadThread::ReadLoopSimple(void)
     //ATLTRACE("  Read thread: Number of read bytes for current block: %u\n", fBytesProcessed);  
     //ATLTRACE("  Read thread CRC32 for this block is: %u\n", crc32.GetResult());
     fTargetQueue->ReleaseChunk(chunk);
+    if (fCancel)
+      Terminate(-1);  // terminate thread after releasing buffer and before acquiring next one
   } 
   fCrc32 = crc32.GetResult();
   ATLTRACE("Read thread: Number of read bytes in total: %u\n", fBytesProcessed);  

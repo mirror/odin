@@ -43,6 +43,8 @@ LPCWSTR EInternalException::sMessages[] = {
   L"Failed to write correct number of bytes to buffer", // wrongWriteSize
   L"Internal overflow of fixed sized string table", // internalStringTableOverflow
   L"The file header information for this volume is too big for the file chunk size. Please use a bigger chunk size.", //chunkSizeTooSmall
+  L"The maximum number of supported partitions of a hard disk is exceeded (internal buffer too small),", //maxPartitionNumberExceeded
+  L"The partition format of this drive is not supported (only MBR format, no EFI)", // unsupportedPartitionFormat
 };
 
 

@@ -32,7 +32,7 @@
 
 CIniWrapper CConfigEntryStatics::sIni;
 extern const wchar_t defaultSectionName[] = L"Standard";
-CStringTable CConfigEntryStatics::sStringTable(2048);
+CStringTable CConfigEntryStatics::sStringTable(4096);
 
   // return TRUE if the executable was run from a USB-Stick, Floppy etc
 bool ProcessLoadedFromRemovableDrive() {

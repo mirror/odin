@@ -91,7 +91,11 @@ DWORD CStopWatch::Init() {
 //---------------------------------------------------------------------------
 // Constructor
 //
-CDriveInfo::CDriveInfo(wstring displayName, wstring deviceName, wstring mountPoint, bool isDisk, int containedVolumes)
+CDriveInfo::CDriveInfo(
+     const std::wstring& displayName, 
+     const std::wstring& deviceName, 
+     const std::wstring& mountPoint, 
+     bool isDisk)
 {
   fDisplayName = displayName;
   fDeviceName  = deviceName;
@@ -100,8 +104,9 @@ CDriveInfo::CDriveInfo(wstring displayName, wstring deviceName, wstring mountPoi
   fUsedBytes = fBytes = fSectors = fBytesPerSector = fSectorsPerTrack = fClusterSize = 0;
   fReadable = fWritable = fKnownType = false;
   fPartitionType = PARTITION_ENTRY_UNUSED;
-  fContainedVolumes = containedVolumes;
+  fContainedVolumes = 0;
   fIsDisk = isDisk;
+  fParent = NULL;
 }
 
 
@@ -234,6 +239,14 @@ if (!bSuccess)
   }
 }
 
+unsigned CDriveInfo::GetDiskNumber()
+{
+  unsigned no;
+  int pos1 = fDeviceName.find(L"Harddisk") + 8;
+  int pos2 = fDeviceName.find(L'\\', pos1);
+  no = _wtoi(fDeviceName.substr(pos1, pos2-pos1).c_str());
+  return no;
+}
 
 //---------------------------------------------------------------------------
 // TDriveList class implementation
@@ -296,6 +309,8 @@ CDriveList::CDriveList(bool ShowProgress)
           deviceName += L"\\Partition0";
           //deviceName = partitions[0];
           displayName += L" (entire disk)";
+          CDriveInfo *pDiskInfo = new CDriveInfo(displayName, deviceName, mountPoint, true);
+
           // If this is a hard disk, check for and add any partitions
           if (partitions.size() > 0) {
             for (unsigned i = 0; i < partitions.size(); i++) {
@@ -303,15 +318,16 @@ CDriveList::CDriveList(bool ShowProgress)
               ATLTRACE(" Found partition device name [%d]: %S Length: %d\n", i, partitionDeviceName.c_str(), partitionDeviceName.length());
               if ((partitionDeviceName.find(L"Partition0") == string::npos) && (partitionDeviceName.find(L"Partition") == 18) && (partitionDeviceName.length() == 28) ) {
                 partitionCount++; // we found a real partition
-                CDriveInfo *partition;
+                CDriveInfo *partitionInfo;
                 wstring volumeLink;
                 partitionDisplayName = partitionDeviceName;
                 bool ok = GetNTLinkDestination(partitionDeviceName.c_str(), volumeLink);
                 partitionMountPoint = volumes[volumeLink];
                 if (partitionMountPoint.length() > 0)
                   partitionDisplayName += L" ("+ partitionMountPoint + L")";
-                partition = new CDriveInfo(partitionDisplayName, partitionDeviceName, partitionMountPoint, false);
-                fDriveList.push_back(partition);
+                partitionInfo = new CDriveInfo(partitionDisplayName, partitionDeviceName, partitionMountPoint, false);
+                partitionInfo->SetParent(pDiskInfo);
+                fDriveList.push_back(partitionInfo);
               }  
             }  
           } // if
@@ -341,9 +357,13 @@ CDriveList::CDriveList(bool ShowProgress)
             }
             skipEntireDiskPartion = bytes1==bytes2; // does root partition and first partions have same size?
           }
-          if (!skipEntireDiskPartion) {
-            CDriveInfo *drive = new CDriveInfo(displayName, deviceName, mountPoint, true, partitionCount);
-            fDriveList.push_back(drive);
+          if (skipEntireDiskPartion) {
+            delete pDiskInfo;
+            pDiskInfo = NULL;
+          } else {
+            //CDriveInfo *drive = new CDriveInfo(displayName, deviceName, mountPoint, true, partitionCount);
+            pDiskInfo->SetContainedVolumes(partitionCount);
+            fDriveList.push_back(pDiskInfo);
           }
         } // find hard disk
         else { // not a hard disk must be a floppy
@@ -391,3 +411,26 @@ int CDriveList::GetIndexOfDrive(LPCWSTR drive) const
       return (int)i;
   return -1;
 }
+
+  // return index of list for given device name or -1 if not found
+int CDriveList::GetIndexOfDeviceName(const wstring& deviceName) const
+{
+  for (size_t i=0; i<fDriveList.size(); i++)
+    if (fDriveList[i]->GetDeviceName() == deviceName)
+      return (int)i;
+  return -1;
+}
+
+  // fill the array pVolumes with all contained volumes of pDriveInfo, pDriveInfo must point to
+  // a harddisk device otherwise the function does nothing, return the number of found volumes
+int CDriveList::GetVolumes(const CDriveInfo* pDriveInfo, CDriveInfo** pVolumes, int volumeCount) const
+{
+  int result = 0;
+  int j = 0;
+  for (unsigned i=0; i<fDriveList.size(); i++) {
+    if (fDriveList[i]->GetParent() == pDriveInfo && j<volumeCount) 
+      pVolumes[j++] = fDriveList[i];
+  }
+  return j;
+}
+

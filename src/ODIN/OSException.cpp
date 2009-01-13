@@ -92,25 +92,3 @@ void EWinException::AppendNtStatusMessage()
   }
 }
 
-void EWinException::ExpandParameters(const wchar_t** params, int len)
-{
-  const wchar_t* placeHolders[] = { L"{0}", L"{1}", L"{2}", L"{3}"};
-  const wchar_t*pattern;
-  wstring tmp1, tmp2;
-  const int placeHolderLen = sizeof(placeHolders) / sizeof(placeHolders[0]);
-  for (int i=0; i<len && i<placeHolderLen; i++) {
-    pattern=placeHolders[i];
-    size_t index;
-    size_t phlen = wcslen(placeHolders[i]);
-    while ((index = fMessage.find(pattern)) != string::npos) {
-      tmp1 = fMessage.substr(0, index);
-      tmp2 = fMessage.substr(index+phlen, fMessage.length()-index-phlen);
-      fMessage = tmp1 + params[i] + tmp2;
-    }
-  }
-}
-
-void OSExceptionTest()
-{
-}
-

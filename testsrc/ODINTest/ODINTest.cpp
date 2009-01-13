@@ -30,12 +30,16 @@
 #include "cppunit/TextOutputter.h"
 #include "cppunit/extensions/TestFactoryRegistry.h"
 #include "cppunit/ui/text/TestRunner.h"
+#include "..\..\src\ODIN\Config.h"
 
 using namespace std;
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	  // Get the top level suite from the registry
+  // initialize ini file to read config settings for test and for ConfigTest
+  CfgFileInitialize(L"ODINTest.ini", true);
+	
+  // Get the top level suite from the registry
   CppUnit::Test *suite = CppUnit::TestFactoryRegistry::getRegistry().makeTest();
 
   // Adds the test to the list of test to run
@@ -54,10 +58,12 @@ int _tmain(int argc, _TCHAR* argv[])
   // Run all tests.
   wasSuccessful = runner.run("", true);
   // Run a single test:
-  //wasSuccessful = runner.run("ConfigTest", true);
-  //wasSuccessful = runner.run("ODINManagerTest", true);
-  //wasSuccessful = runner.run("ExceptionTest", true);
-  //wasSuccessful = runner.run("ImageTest", true);
+  // wasSuccessful = runner.run("CompressedRunLengthStreamTest");
+  // wasSuccessful = runner.run("ConfigTest", true);
+  // wasSuccessful = runner.run("ODINManagerTest", true);
+  // wasSuccessful = runner.run("PartitionInfoMgrTest", true);
+  // wasSuccessful = runner.run("ExceptionTest", true);
+  // wasSuccessful = runner.run("ImageTest", true);
 
   // Return error code 1 if the one of test failed.
   //cout << "Press <return> to continue...";

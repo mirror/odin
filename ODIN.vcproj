@@ -119,6 +119,7 @@
 				Name="VCPreBuildEventTool"
 				Description="Increment Build Number"
 				CommandLine="set BUILDNO=0&#x0D;&#x0A;for /F &quot;usebackq&quot; %%i in (&quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;) do set BUILDNO=%%i&#x0D;&#x0A;set /A BUILDNO=%BUILDNO%+1&#x0D;&#x0A;@echo %BUILDNO% &gt; &quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;&#x0D;&#x0A;@echo // buildnumber.h generated file to count buildnumber &gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBER %BUILDNO% &gt;&gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBERSTR &quot;%BUILDNO%&quot; &gt;&gt;&quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;"
+				ExcludedFromBuild="true"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -143,7 +144,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="c:\devtools\wtl80\include;c:\devtools\atl30"
+				AdditionalIncludeDirectories="C:\DevTools\atl30;c:\devtools\wtl80\include"
 				PreprocessorDefinitions="WIN32;STRICT"
 				ExceptionHandling="1"
 				RuntimeLibrary="0"
@@ -291,6 +292,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\PartitionInfoMgr.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\ReadThread.cpp"
 				>
 			</File>
@@ -317,6 +322,14 @@
 						UsePrecompiledHeader="1"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\VSSException.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\VSSWrapper.cpp"
+				>
 			</File>
 			<File
 				RelativePath=".\src\ODIN\WriteThread.cpp"
@@ -432,6 +445,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\PartitionInfoMgr.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\ReadThread.h"
 				>
 			</File>
@@ -452,11 +469,15 @@
 				>
 			</File>
 			<File
-				RelativePath=".\sync.h"
+				RelativePath=".\src\ODIN\Thread.h"
 				>
 			</File>
 			<File
-				RelativePath=".\src\ODIN\Thread.h"
+				RelativePath=".\src\ODIN\VSSException.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\VSSWrapper.h"
 				>
 			</File>
 			<File

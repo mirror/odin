@@ -68,5 +68,9 @@ http://www.codeproject.com/cpp/logdriver.asp
 http://www.codeproject.com/KB/debug/amlog.aspx
 http://www.codeproject.com/KB/debug/log.aspx
 
+MBR Tools
+http://www.mbrwizard.com
+
+http://jesusnjim.com/code/mbrsaverestore.html (Open Source)
 
 

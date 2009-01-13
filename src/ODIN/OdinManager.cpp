@@ -37,6 +37,7 @@
 #include "DriveList.h"
 #include "InternalException.h"
 #include "SplitManager.h"
+#include "VSSWrapper.h"
 
 #ifdef DEBUG
   #define new DEBUG_NEW
@@ -51,10 +52,12 @@ COdinManager::COdinManager()
    fSaveAllBlocks(L"SaveAllBlocks", false),
    fSplitFiles(L"SplitFiles", false),
    fSplitFileSize(L"SplitFileSize", 0),
-   fReadBlockSize(L"ReadWriteBlockSize", 1048576) // 1MB
+   fReadBlockSize(L"ReadWriteBlockSize", 1048576), // 1MB
+   fTakeVSSSnapshot(L"TakeVSSSnaphot", false)
 {
   fDriveList = NULL;
   fVerifyCrc32 = 0;
+  fVSS = NULL;
   Init();
 }
 
@@ -78,6 +81,11 @@ void COdinManager::Init()
   fSplitCallback = NULL;
   fIsSaving = false;
   fIsRestoring = false;
+  fVSS = NULL;
+  fMultiVolumeMode = false;
+  if (!CVssWrapper::VSSIsSupported()) {
+    fTakeVSSSnapshot = false;
+  }
 }
   
 void COdinManager::RefreshDriveList()
@@ -86,7 +94,9 @@ void COdinManager::RefreshDriveList()
   fDriveList = new CDriveList(false);
 }
 
-void COdinManager::Terminate()
+  // Terminates all worker threads, bCancelled indicates if this is 
+  // becuse a running operation was aborted.
+void COdinManager::Terminate(bool bCancelled)
 {
   if (NULL != fReadThread) {
     fVerifyCrc32 = fReadThread->GetCrc32();
@@ -101,21 +111,41 @@ void COdinManager::Terminate()
   if (NULL != fSplitCallback) {
     delete fSplitCallback;
   }
+  if (fVSS && !fMultiVolumeMode) {
+    fVSS->ReleaseSnapshot(bCancelled);
+    delete fVSS;
+    fVSS = NULL;
+  }
   Reset();
 }
 
 void COdinManager::Reset()
 {
   delete fReadThread;
+  fReadThread = NULL;
   delete fWriteThread;
+  fWriteThread = NULL;
   delete fCompDecompThread;
+  fCompDecompThread = NULL;
   delete fSourceImage;
+  fSourceImage = NULL;
   delete fTargetImage;
+  fTargetImage = NULL;
   delete fEmptyReaderQueue;
+  fEmptyReaderQueue = NULL;
   delete fFilledReaderQueue;
+  fFilledReaderQueue = NULL;
   delete fEmptyCompDecompQueue;
+  fEmptyCompDecompQueue = NULL;
   delete fFilledCompDecompQueue;
-  Init();
+  fFilledCompDecompQueue = NULL;
+  if (!fMultiVolumeMode) {
+    if (fVSS) {
+      delete fVSS;
+      fVSS = NULL;
+    }
+    Init();
+  }
 }
 
 CDriveInfo* COdinManager::GetDriveInfo(int index) {
@@ -134,7 +164,7 @@ void COdinManager::SavePartition(int driveIndex, LPCWSTR fileName, ISplitManager
 	{
 		pDriveInfo = fDriveList->GetItem(driveIndex);
     DoCopy(isDrive, pDriveInfo->GetDeviceName().c_str(), isFile, fileName, 0, 0, pDriveInfo->GetClusterSize(),
-      cb, false, pDriveInfo->GetContainedVolumes(), pDriveInfo->IsCompleteHardDisk());
+      cb, false, driveIndex);
 	}
 }
 
@@ -144,14 +174,54 @@ void COdinManager::RestorePartition(LPCWSTR fileName, int driveIndex, unsigned n
 	if (fDriveList && driveIndex >= 0 && driveIndex < (int) fDriveList->GetCount())
 	{
 		pDriveInfo = fDriveList->GetItem(driveIndex);
-    DoCopy(isFile, fileName, isDrive, pDriveInfo->GetDeviceName().c_str(), noFiles, totalSize, 0, cb, false, pDriveInfo->GetContainedVolumes(), pDriveInfo->IsCompleteHardDisk());
+    DoCopy(isFile, fileName, isDrive, pDriveInfo->GetDeviceName().c_str(), noFiles, totalSize, 0, cb, false, driveIndex);
 	}
 }
 
-void COdinManager::VerifyPartition(LPCWSTR fileName, unsigned noFiles, unsigned __int64 totalSize, ISplitManagerCallback* cb)
+void COdinManager::VerifyPartition(LPCWSTR fileName, int driveIndex, unsigned noFiles, unsigned __int64 totalSize, ISplitManagerCallback* cb)
 {
-  DoCopy(isFile, fileName, isUndefined, NULL, noFiles, totalSize, 0, cb, true, 0, false);
+  DoCopy(isFile, fileName, isUndefined, NULL, noFiles, totalSize, 0, cb, true, driveIndex);
 }
+
+void COdinManager::MakeSnapshot(int driveIndex) {
+  if (!fMultiVolumeMode)
+    return; // ignore 
+
+  if (fTakeVSSSnapshot) {
+    CDriveInfo*	pDriveInfo = driveIndex<0 ? NULL : fDriveList->GetItem(driveIndex);
+    int subPartitions = pDriveInfo ? pDriveInfo->GetContainedVolumes() : 0;
+    bool isHardDisk = pDriveInfo ? pDriveInfo->IsCompleteHardDisk() : false;
+    LPCWSTR *mountPoints;
+
+    if (isHardDisk) {
+        CDriveInfo **pContainedVolumes = new CDriveInfo* [subPartitions];
+        mountPoints = new LPCWSTR [subPartitions];
+
+        int res = fDriveList->GetVolumes(pDriveInfo, pContainedVolumes, subPartitions);
+        for (int i=0; i<res; i++) {
+          ATLTRACE(L"Found sub-partition: %s\n", pContainedVolumes[i]->GetDisplayName().c_str());
+          mountPoints[i] = pContainedVolumes[i]->GetMountPoint().c_str();
+        }
+        delete pContainedVolumes;
+    } else {
+        subPartitions = 1;
+        mountPoints = new LPCWSTR [1];
+    }
+
+    fVSS = new CVssWrapper();
+    fVSS->PrepareSnapshot(mountPoints, subPartitions);
+    delete mountPoints;
+  }
+}
+
+void COdinManager::ReleaseSnapshot(bool bCancelled) {
+  if (!fMultiVolumeMode)
+    return; // ignore 
+
+  fVSS->ReleaseSnapshot(bCancelled);
+
+}
+
 
 void COdinManager::GetDriveNameList(std::list<std::wstring>& driveNames)
 {
@@ -161,12 +231,21 @@ void COdinManager::GetDriveNameList(std::list<std::wstring>& driveNames)
 
 void COdinManager::DoCopy(TImageStoreType sourceType, LPCWSTR fileIn, TImageStoreType targetType, LPCWSTR fileOut, 
                           unsigned noFiles, unsigned __int64 totalSize, unsigned bytesPerCluster, 
-                          ISplitManagerCallback* cb, bool verifyOnly, int subPartitions, bool isHardDisk)
+                          ISplitManagerCallback* cb, bool verifyOnly, int driveIndex)
 {
 	int nBufferCount = 8;
   TCompressionFormat decompressionFormat = noCompression;
   bool bSaveAllBlocks = fSaveAllBlocks;
   fVerifyCrc32 = 0;
+  CDriveInfo*	pDriveInfo = driveIndex<0 ? NULL : fDriveList->GetItem(driveIndex);
+  bool isHardDisk = pDriveInfo ? pDriveInfo->IsCompleteHardDisk() : false;
+  LPCWSTR mountPoint = NULL;
+
+  if (isHardDisk && !fSaveAllBlocks) {
+    ATLASSERT(fMultiVolumeMode);
+  } else {
+    mountPoint = pDriveInfo ? pDriveInfo->GetMountPoint().c_str() : NULL;
+  }
 
   // Create the output image store
   switch (targetType) {
@@ -182,6 +261,7 @@ void COdinManager::DoCopy(TImageStoreType sourceType, LPCWSTR fileIn, TImageStor
       break;
     case isDrive: {
       fTargetImage = new CDiskImageStream();
+      int subPartitions = pDriveInfo ? pDriveInfo->GetContainedVolumes() : 0;
       ((CDiskImageStream*)fTargetImage)->SetContainedSubPartitionsCount(subPartitions);
       fTargetImage->Open(fileOut, IImageStream::forWriting);
       break;
@@ -206,6 +286,15 @@ void COdinManager::DoCopy(TImageStoreType sourceType, LPCWSTR fileIn, TImageStor
       }
       break;
     case isDrive: {
+      std::wstring vssVolume;
+      if (fTakeVSSSnapshot && ! fMultiVolumeMode && !verifyOnly) {
+        fVSS = new CVssWrapper();
+        LPCWSTR* mountPointPtr = &mountPoint;
+        fVSS->PrepareSnapshot(mountPointPtr, 1);
+        vssVolume = fVSS->GetSnapshotDeviceName(0);
+        if (vssVolume.length())
+            fileIn  = vssVolume.c_str() ;
+      }
       fSourceImage = new CDiskImageStream();
       fSourceImage->Open(fileIn, IImageStream::forReading);
       break;
@@ -259,12 +348,13 @@ void COdinManager::DoCopy(TImageStoreType sourceType, LPCWSTR fileIn, TImageStor
       } 
       fIsRestoring = true;
   } else if (sourceType == isDrive) {
+
       CFileImageStream *fileStream = (CFileImageStream*) fTargetImage;
       fileStream->SetComment(fComment.c_str());
       fileStream->SetCompressionFormat(GetCompressionMode());
       fileStream->SetVolumeFormat(isHardDisk ? CImageFileHeader::volumeHardDisk : CImageFileHeader::volumePartition);
       ((CDiskImageStream*)fSourceImage)->SetBytesPerCluster(bytesPerCluster);
-      if (bSaveAllBlocks || !((CDiskImageStream*)fSourceImage)->SupportsReadingOnlyUsedBlocks()) 
+      if (bSaveAllBlocks || isHardDisk || !((CDiskImageStream*)fSourceImage)->SupportsReadingOnlyUsedBlocks()) 
         bSaveAllBlocks = true;
       if (!bSaveAllBlocks) {
         fileStream->WriteImageFileHeaderAndAllocationMap((CDiskImageStream*)fSourceImage);
@@ -288,6 +378,19 @@ void COdinManager::DoCopy(TImageStoreType sourceType, LPCWSTR fileIn, TImageStor
     fWriteThread->Resume();
   if (fCompDecompThread != NULL)
     fCompDecompThread->Resume();
+}
+
+void COdinManager::CancelOperation()
+{
+  if (fReadThread != NULL) {
+    fReadThread->CancelThread();
+  }
+  if (fWriteThread != NULL) {
+    fWriteThread->CancelThread();
+  }
+  if (fCompDecompThread != NULL) {
+    fCompDecompThread->CancelThread();
+  }
 }
 
 unsigned COdinManager::GetThreadCount()
@@ -360,7 +463,8 @@ unsigned __int64 COdinManager::GetTotalBytesToProcess()
   
   unsigned __int64 res;
 
-  if (fIsSaving) {
+  if (fIsSaving || (fIsRestoring && fTargetImage == NULL) ) {
+  //               ^ verify mode! (rhs of or condition)                   
     if (NULL != fSourceImage) {
       if (fSaveAllBlocks)
         res = fSourceImage->GetSize();
@@ -382,6 +486,7 @@ unsigned __int64 COdinManager::GetTotalBytesToProcess()
           res = fSourceImage->GetSize();
       }
     } else {
+      // we are in verify mode
       res = 0;
     }
   } else {

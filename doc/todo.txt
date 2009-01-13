@@ -44,6 +44,7 @@ command line interface
 network transfer
 EFI partitions
 backup boot sector and partition tables
+allow restore to smaller partition if last used block fits in available space
 
 
 
