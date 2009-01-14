@@ -67,15 +67,31 @@ After a backup of a volume you can ensure in this way that the file was written
 accurately. You can perform a verify at any time after the image was written.
 </p>
 
-<h2><a name="restrictions">
+<h3>
+Disk and Volume Backups
+</h3>
+<p>
+  If an image of a single volume or a disk with all blocks is created only a single
+  file is created with the extension .img. If a disk with only used blocks option is 
+  created ODIN will produce a file with an .mbr extension plus a .img file for every
+  partition of the disk with the -PartionX.img extension to the provided file name. 
+  This set of created files must always be kept together, the .mbr file is not 
+  sufficient. The .mbr file contains the master boot record plus the partition 
+  information of the disk. You can restore an indvidual partition by selecting a 
+  target partition and restore the corresponding .img file from the file set. To 
+  restore the complete disk select the .mbr file from the file system and the 
+  appopriate disk in the list of available partitions (indicated by label: Entire 
+  Disk).
+</p>
+
+  <h2><a name="restrictions">
 Restrictions:
 </a></h2>
 <p>
 During a backup operation no file activity must be performed on the volume. 
-Therefore you can not backup the volume of the system partition where the 
-currently active Windows is installed (this will be possible in a future
-version). Backing up or restoring large images may take several hours of 
-operation.
+If write operations occur during the backup operation use the Snapshot option
+for backup.
+Backing up or restoring large images may take several hours of operation.
 </p>
 <p>
 You must have admin privileges to run ODIN. In Windows Vista the user account
@@ -109,8 +125,22 @@ you should only backup used blocks if the option is available. Save all blocks
 for example if you want to make a backup of a damaged file system before trying
 repair attempts.
 </p>
+  <h4>
+    Snapshot Function
+  </h4>
+  <p>
+  A snapshot of a volume or disk is a functionality to freeze the current state of
+  a medium and make the backup from the snaphshot while the operating system or 
+  running applications can still read and write files during the backup. This allows
+  for example to backup the Windows system partition while Windows is running. Another
+  example might be a database. This functionality requires the VSS (Volume Shadow Copy
+  Service) being running. For more details refer to the Microsoft documentation of the
+  VSS service. If the VSS is not available this option is greyed out. The VSS is also 
+  not available if a 32-Bit application runs under 64-Bit operating system. Using snapshots
+  can significantly lower the performance of the backup operation.
+  </p>
 
-<h3>
+      <h3>
 Compression Options
 </h3>
 <p>

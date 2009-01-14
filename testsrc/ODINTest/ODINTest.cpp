@@ -34,10 +34,15 @@
 
 using namespace std;
 
+DECLARE_SECTION_GLOBAL(L"ODINTest");
+
 int _tmain(int argc, _TCHAR* argv[])
 {
+  USES_CONVERSION;
   // initialize ini file to read config settings for test and for ConfigTest
   CfgFileInitialize(L"ODINTest.ini", true);
+
+  DECLARE_INIT_ENTRY(wstring, testsToRun, L"RunTests", L"");
 	
   // Get the top level suite from the registry
   CppUnit::Test *suite = CppUnit::TestFactoryRegistry::getRegistry().makeTest();
@@ -55,8 +60,13 @@ int _tmain(int argc, _TCHAR* argv[])
                                                        std::cerr ) );
   
   bool wasSuccessful;
+
+  if ((testsToRun().compare(L"All")==0) || (testsToRun().length() == 0))
+    wasSuccessful = runner.run("", true);
+  else
+    wasSuccessful = runner.run(W2A(testsToRun().c_str()), true);
   // Run all tests.
-  wasSuccessful = runner.run("", true);
+  // wasSuccessful = runner.run("", true);
   // Run a single test:
   // wasSuccessful = runner.run("CompressedRunLengthStreamTest");
   // wasSuccessful = runner.run("ConfigTest", true);

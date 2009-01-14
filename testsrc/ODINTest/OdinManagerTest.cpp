@@ -51,6 +51,7 @@ ODINManagerTest::ODINManagerTest()
  fImageHarddiskTmp(L"ImageDisk", L""), 
  fImageSaveDir(L"ImageSaveDir", L"c:\\testout"),
  fSleepTime(L"WaitTimeAfterFormat", 5000),
+ fUseFormatDrive(L"UseFormatDrive", true),
  fCreateDeleteThread(NULL)
 {
   fImageHarddisk = fImageHarddiskTmp;
@@ -364,9 +365,11 @@ void ODINManagerTest::ODINManagerTestTemplatePartition(TFileSystem fileSystem, L
   wstring imageRootPath = fImageDrive() + L"\\";
 
   // Step 1:
-  wcout << L"Formatting test drive before test begin: " << fImageDrive().c_str() << endl;
-  //FormatTestDrive(fileSystem, volumeLabel);
-  DeleteAllFiles(fImageDrive().c_str());
+  wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test drive before restoring image: " << fImageDrive().c_str() << endl;
+  if (fUseFormatDrive)
+    FormatTestDrive(fImageDrive().c_str(), fileSystem, volumeLabel); // cleaner but more time consuming
+  else
+    DeleteAllFiles(fImageDrive().c_str());
   fMgr.RefreshDriveList(); // after reformatting cluster size might have changed!
   driveList = fMgr.GetDriveList();
   int index = driveList->GetIndexOfDrive(fImageDrive().c_str());
@@ -386,9 +389,11 @@ void ODINManagerTest::ODINManagerTestTemplatePartition(TFileSystem fileSystem, L
   wcout << L"Create volume image from " << fImageDrive().c_str() << L" and save in " << imageFile << endl;
   CreateDriveImage(index, imageFile, splitFiles);
   // Step 6:
-  wcout << L"Formatting test drive before restoring image: " << fImageDrive().c_str() << endl;
-  //FormatTestDrive(fImageDrive().c_str(), fileSystem, volumeLabel);
-  DeleteAllFiles(fImageDrive().c_str());
+  wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test drive before restoring image: " << fImageDrive().c_str() << endl;
+  if (fUseFormatDrive)
+    FormatTestDrive(fImageDrive().c_str(), fileSystem, volumeLabel); // cleaner but more time consuming
+  else
+    DeleteAllFiles(fImageDrive().c_str());
   // Step 7:
   Sleep(fSleepTime); // otherwise we get a share conflict, seems that some files are not yet closed
   wcout << L"Restore image from: " << imageFile << endl;
@@ -493,9 +498,12 @@ void ODINManagerTest::ODINManagerTestTemplateEntireDisk(const wstring& harddiskD
   CPPUNIT_ASSERT_MESSAGE("Configuration error: hard disk device name for back/restore test not found", (int)indexHardDisk >= 0);
 
   // Step 1:
-  wcout << L"Formatting test drive before test begin: found drives: " << driveCount << endl;
-  //FormatTestDriveMultiple(driveCount, drives, fileSystems, L"UnitTest");
-  DeleteAllFilesMultiple(driveCount, drives);
+  wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test drive before restoring image: " << harddiskDevice << endl;
+  if (fUseFormatDrive)
+    FormatTestDriveMultiple(driveCount, drives, fileSystems, L"UnitTest");
+  else
+    DeleteAllFilesMultiple(driveCount, drives);
+
   // Step 2:
   wcout << L"Copying test files from " << harddiskDevice << endl;
   CopyTestFilesMultiple(driveCount, drives);
@@ -511,12 +519,15 @@ void ODINManagerTest::ODINManagerTestTemplateEntireDisk(const wstring& harddiskD
   wcout << L"Create volume image from " << harddiskDevice << L" and save in " << imageFile << endl;
   CreateMultipleDriveImages(indexHardDisk, imageFile, splitFiles);
   // Step 6:
-  wcout << L"Formatting test drive before restoring image: " << harddiskDevice << endl;
-  // FormatTestDriveMultiple(driveCount, drives, fileSystems, L"UnitTest");
+  wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test drive before restoring image: " << harddiskDevice << endl;
 
   DWORD dummyval = GetLogicalDrives(); // dummy call just to mount all volumes. This is needed otherwise
                                         // we run into some strange errors when openeing the device again
-  DeleteAllFilesMultiple(driveCount, drives);
+  if (fUseFormatDrive)
+    FormatTestDriveMultiple(driveCount, drives, fileSystems, L"UnitTest");
+  else
+    DeleteAllFilesMultiple(driveCount, drives);
+
   // Step 7:
   Sleep(fSleepTime); // otherwise we get a share conflict, seems that some files are not yet closed
   wcout << L"Restore image from: " << imageFile << endl;

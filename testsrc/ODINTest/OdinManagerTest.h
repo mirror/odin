@@ -125,6 +125,7 @@ private:
   DECLARE_ENTRY(std::wstring, fImageHarddiskTmp)  // complete hard disk to restore
   DECLARE_ENTRY(std::wstring, fImageSaveDir) // path where to store disk images during backup
   DECLARE_ENTRY(int, fSleepTime)
+  DECLARE_ENTRY(bool, fUseFormatDrive) // cleanbut time consuming format each drive before restore
 };
 
 //====================================================================
