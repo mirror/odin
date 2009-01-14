@@ -504,19 +504,19 @@ void CDiskImageStream::Close()
     }
 
     CloseDevice();
-/*
+/**/
     // resize partition if necessary and supported (we must close device first and then open again otherwise it fails)
     // only supported on NTFS not on FAT
     OpenDevice(0);
     ZeroMemory(&volData, sizeof(volData));
     res = DeviceIoControl(fHandle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, 0, &volData, sizeof(volData), &dummy, NULL);
-    LONGLONG newVolSize = fSize / fBytesPerSector;
-    if (res && volData.NumberSectors.QuadPart != newVolSize) {
+    LONGLONG newVolSize = fSize / fBytesPerCluster;
+    if (res && volData.TotalClusters.QuadPart != newVolSize) {
       res = DeviceIoControl(fHandle, FSCTL_EXTEND_VOLUME, &newVolSize, sizeof(newVolSize), NULL, 0, &dummy, NULL);
       // CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_EXTEND_VOLUME");
     }
     CloseDevice();
-*/
+/**/
   }
 }
 
