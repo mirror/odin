@@ -110,6 +110,7 @@ void COdinManager::Terminate(bool bCancelled)
   }
   if (NULL != fSplitCallback) {
     delete fSplitCallback;
+    fSplitCallback = NULL;
   }
   if (fVSS && !fMultiVolumeMode) {
     fVSS->ReleaseSnapshot(bCancelled);
