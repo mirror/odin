@@ -1075,7 +1075,7 @@ void CODINDlg::ReadCommentFromDialog()
   WTL::CString hint;
   hint.LoadString(IDS_ENTERCOMMENT);
   ReadWindowText(commentTextField, fComment);
-  if (fComment.compare(fComment) == 0)
+  if (fComment.compare(hint) == 0)
     fComment.empty();
 }
 
@@ -1477,6 +1477,9 @@ void CODINDlg::RestorePartitionOrDisk(int index, LPCWSTR fileName)
     // or a .img file:
     fSplitCB.RemoveTrailingNumberFromFileName(baseName);
     GetNoFilesAndFileSize(baseName.c_str(), fileCount, fileSize, isEntireDriveImagefile);
+    // treat special case where we have split file mode and only a single file with appendix 0000
+    if (fileCount == 0 && baseName != fileName)
+      baseName = fileName;
   }
 
   if (isHardDisk && !isEntireDriveImagefile) {
@@ -1611,12 +1614,18 @@ LRESULT CODINDlg::OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& b
 
     UpdateStatus(true);
     fTimer = SetTimer(cTimerId, 1000); 
-    ReadCommentFromDialog();
-    fOdinManager.SetComment(fComment.c_str());
     fWasCancelled = false;
 
     if (fMode == modeBackup) {
       bool ok = true;
+      ReadCommentFromDialog();
+      fOdinManager.SetComment(fComment.c_str());
+      if ( fOdinManager.GetSplitSize() > 0) {
+        wstring fileNameWithNumber(fileName);
+        fSplitCB.RemoveTrailingNumberFromFileName(fileNameWithNumber);
+        fSplitCB.GetFileName(0, fileNameWithNumber);
+        comboFiles.SetWindowText(fileNameWithNumber.c_str());
+      }
       // check if save possible:
       int res = CheckConditionsForSavePartition(fileName, index);
       if (res == IDOK || res == IDYES) {

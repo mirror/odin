@@ -393,9 +393,11 @@ long CDiskImageStream::OpenDevice(DWORD shareMode)
 
 void CDiskImageStream::CloseDevice()
 {
-  DWORD res = CloseHandle(fHandle);  
-  CHECK_OS_EX_INFO(res, EWinException::closeHandleError)
-  fHandle = NULL;
+  if (fHandle != NULL) {
+    DWORD res = CloseHandle(fHandle);  
+    CHECK_OS_EX_INFO(res, EWinException::closeHandleError)
+    fHandle = NULL;
+  }
 }
 
 void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
@@ -504,19 +506,21 @@ void CDiskImageStream::Close()
     }
 
     CloseDevice();
-/**/
+
     // resize partition if necessary and supported (we must close device first and then open again otherwise it fails)
     // only supported on NTFS not on FAT
-    OpenDevice(0);
-    ZeroMemory(&volData, sizeof(volData));
-    res = DeviceIoControl(fHandle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, 0, &volData, sizeof(volData), &dummy, NULL);
-    LONGLONG newVolSize = fSize / fBytesPerCluster;
-    if (res && volData.TotalClusters.QuadPart != newVolSize) {
-      res = DeviceIoControl(fHandle, FSCTL_EXTEND_VOLUME, &newVolSize, sizeof(newVolSize), NULL, 0, &dummy, NULL);
-      // CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_EXTEND_VOLUME");
+    bool isRawDisk = fName.find(L"Partition0") != std::string::npos;
+    if ( fOpenMode == forWriting && !isRawDisk) {
+      OpenDevice(0);
+      ZeroMemory(&volData, sizeof(volData));
+      res = DeviceIoControl(fHandle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, 0, &volData, sizeof(volData), &dummy, NULL);
+      LONGLONG newVolSize = fSize / fBytesPerCluster;
+      if (res && volData.TotalClusters.QuadPart != newVolSize) {
+        res = DeviceIoControl(fHandle, FSCTL_EXTEND_VOLUME, &newVolSize, sizeof(newVolSize), NULL, 0, &dummy, NULL);
+        // CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_EXTEND_VOLUME");
+      }
+      CloseDevice();
     }
-    CloseDevice();
-/**/
   }
 }
 
