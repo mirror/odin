@@ -15,15 +15,21 @@ Open in wtl directory in subdirectory AppWiz file setup80x.js, replace all occur
 double click setup90x.js
 
 4)
+Download from Microsoft the Volume Shadow Copy Service SDK 7.2: http://www.microsoft.com/downloads/details.aspx?familyid=0b4f56e4-0ccc-4626-826a-ed2c4c95c871&displaylang=en
+Install the VSS SDK (e.g. to folder c:\DevTools\VSSSDK72)
+
+5)
 Download and install HTML Help Workshop from http://www.microsoft.com/downloads/details.aspx?FamilyID=00535334-c8a6-452f-9aa0-d597d16580cc&displaylang=en
 Download htmlDocs.zip and htmlhelp.exe. Install htmlhelp.exe in the proposed directory.
 Optional: Unzip the files htmldocs.zip to a sub directory doc in the HTML Help WorkShop install dir
 
-5)
+6)
 Open VC28008Express, open project odin.sln 
 Right click ODIN and select Properties, change box in upper left corner to "All Configurations"
 open tree on the left hand side and navigate to Configuration Properties-C/C++-General. Add the directories to "Additional Include Directories": c:\devtools\wtl80\include;c:\devtools\atl30 (adjust to your dirs from step 2 and 3). 
-Navigate to Configuration Properties-Resources General. Add the directories to "Additional Include Directories": c:\devtools\wtl80\include.
+Navigate to Configuration Properties-Resources General. Add the directories to "Additional Include Directories":
+C:\DevTools\atl30;c:\devtools\wtl80\include (adjust the path names according to your installation).
+
 close dialog, right-click on ODINTest and repeate these settings 
 
 

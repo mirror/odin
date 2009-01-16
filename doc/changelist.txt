@@ -1,5 +1,28 @@
-version 0.11
-=============
+version 0.2 (2009-01-16)
+========================
+Changes:
+ - Support of volume and disk snapshots on backup using Microsoft Volume Shadow Copy Service
+ - Allow backup of system partition (using a snapshot) 
+ - Support backup entire disks with only saving used blocks (.mbr files with partition and .img files for every partition)
+ - Add Browse button for choosing a target name and directory
+ - Add status bar in main window to provide more information
+ - resize volume when restored to larger partitions if file system is NTFS
+
+Bug fixes:
+ - 4GB limit was not checked on all types of partitions
+ - some smaller changes and fixes in GUI
+ - cancel a running backup or restore causes memory leak
+ - detect incomplete written files before restore
+
+Version 0.12 (2008-11-10)
+============
+Changes:
+
+Bug fixes:
+ -Split file option does not work
+
+version 0.11 (2008-10-24)
+============
 
 Bug fixes:
  - Crash when partition is saved to a network drive
