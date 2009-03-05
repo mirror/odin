@@ -50,6 +50,7 @@
 #define ID_DIALOG_SPLASH                205
 #define IDD_DIALOG_SPLASH               205
 #define IDS_INCOMPLETE_IMAGE            206
+#define IDS_UNMOUNTED_VOLUME            207
 #define IDC_LABEL_BYTES_TOTAL           1009
 #define IDC_TAB_GENERAL                 1010
 #define IDC_TABS_SETTINGS               1011

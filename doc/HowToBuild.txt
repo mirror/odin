@@ -32,7 +32,18 @@ C:\DevTools\atl30;c:\devtools\wtl80\include (adjust the path names according to 
 
 close dialog, right-click on ODINTest and repeate these settings 
 
+7)
+zlib is the original version of the zlib compression library from http:// www.zlib.net/ 
+There were changes in the file inffas32.asm because of a compatibility issue with MS Visual
+Studio. Hint from: http://www.achacha.org/vc2008_zlib123/
+replace all errors
+    inffas32.asm(649) : error A2070: invalid instruction operands
+by
+    - movd mm7,[esi]
+    + movd mm7,dword ptr[esi] 
 
+
+libbz2 is the original source from http://www.bzip.org/
 
 
 

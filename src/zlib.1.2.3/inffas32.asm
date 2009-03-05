@@ -644,9 +644,16 @@ L_init_mmx:
 	movd mm0,ebp
 	mov  ebp,ebx
 ; 896 "inffast.S"
-	movd mm4,[esp+0]
-	movq mm3,mm4
-	movd mm5,[esp+4]
+;following line change to incompatibility with MS Visual Studio:
+; org	movd mm4,[esp+0]
+;    	movq mm3,mm4
+;	    movd mm5,[esp+4]
+
+; now;
+    movd mm4,dword ptr[esp+0] 
+    movq mm3,mm4
+	movd mm5,dword ptr[esp+4]
+	
 	movq mm2,mm5
 	pxor mm1,mm1
 	mov  ebx, [esp+8]
@@ -660,7 +667,10 @@ L_do_loop_mmx:
 	ja  L_get_length_code_mmx
 
 	movd mm6,ebp
-	movd mm7,[esi]
+;following line change to incompatibility with MS Visual Studio:
+; org	movd mm7,[esi]
+; now:
+	movd mm7,dword ptr[esi]
 	add  esi,4
 	psllq mm7,mm6
 	add  ebp,32
@@ -717,7 +727,10 @@ L_decode_distance_mmx:
 	ja L_get_dist_code_mmx
 
 	movd mm6,ebp
-	movd mm7,[esi]
+;following line change to incompatibility with MS Visual Studio:
+; org	movd mm7,[esi]
+; now:
+	movd mm7,dword ptr[esi]
 	add  esi,4
 	psllq mm7,mm6
 	add  ebp,32

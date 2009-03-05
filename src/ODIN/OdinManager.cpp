@@ -288,7 +288,7 @@ void COdinManager::DoCopy(TImageStoreType sourceType, LPCWSTR fileIn, TImageStor
       break;
     case isDrive: {
       std::wstring vssVolume;
-      if (fTakeVSSSnapshot && ! fMultiVolumeMode && !verifyOnly) {
+      if (fTakeVSSSnapshot && ! fMultiVolumeMode && !verifyOnly && !pDriveInfo->GetMountPoint().empty()) {
         fVSS = new CVssWrapper();
         LPCWSTR* mountPointPtr = &mountPoint;
         fVSS->PrepareSnapshot(mountPointPtr, 1);
@@ -355,7 +355,7 @@ void COdinManager::DoCopy(TImageStoreType sourceType, LPCWSTR fileIn, TImageStor
       fileStream->SetCompressionFormat(GetCompressionMode());
       fileStream->SetVolumeFormat(isHardDisk ? CImageFileHeader::volumeHardDisk : CImageFileHeader::volumePartition);
       ((CDiskImageStream*)fSourceImage)->SetBytesPerCluster(bytesPerCluster);
-      if (bSaveAllBlocks || isHardDisk || !((CDiskImageStream*)fSourceImage)->SupportsReadingOnlyUsedBlocks()) 
+      if (bSaveAllBlocks || isHardDisk || !((CDiskImageStream*)fSourceImage)->IsMounted()) 
         bSaveAllBlocks = true;
       if (!bSaveAllBlocks) {
         fileStream->WriteImageFileHeaderAndAllocationMap((CDiskImageStream*)fSourceImage);

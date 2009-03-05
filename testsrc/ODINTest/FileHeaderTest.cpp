@@ -236,26 +236,26 @@ void FileHeaderTest::SupportedVolumeEncodingFormatTest()
 void FileHeaderTest::WriteCrc32Checksum(DWORD crc32, unsigned __int64 offset, unsigned length)
 {
   CPPUNIT_ASSERT_EQUAL( Seek(offset, FILE_BEGIN), offset);
-  unsigned count = Write((void*)&crc32Value, sizeof(crc32));
+  size_t count = Write((void*)&crc32Value, sizeof(crc32));
   CPPUNIT_ASSERT_EQUAL(count, sizeof(crc32));
 }
 
 void FileHeaderTest::WriteComment()
 {
-  unsigned count = Write((void*)comment, sizeof(comment));
+  size_t count = Write((void*)comment, sizeof(comment));
   CPPUNIT_ASSERT_EQUAL(count, sizeof(comment));
 }
 
 void FileHeaderTest::WriteVolumeData()
 {
-  unsigned count = Write((void*)volumeData, sizeof(volumeData));
+  size_t count = Write((void*)volumeData, sizeof(volumeData));
   CPPUNIT_ASSERT_EQUAL(count, sizeof(volumeData));
 }
 
 void FileHeaderTest::WriteAllocationBitmap()
 // just write some bytes to simulate allocation bitmap
 {
-  unsigned count = Write((void*)allocBitmap, sizeof(allocBitmap));
+  size_t count = Write((void*)allocBitmap, sizeof(allocBitmap));
   CPPUNIT_ASSERT_EQUAL(count, sizeof(allocBitmap));
 }
   

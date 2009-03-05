@@ -316,7 +316,7 @@ bool CVssWrapper::VSSIsSupported() {
   if (!ok)
     return false;
 
-  xpOrHigher = osInfo.dwMajorVersion > 5 || (osInfo.dwMajorVersion == 5 && osInfo.dwMinorVersion == 1);
+  xpOrHigher = osInfo.dwMajorVersion > 5 || (osInfo.dwMajorVersion == 5 && osInfo.dwMinorVersion >= 1);
   bool is32BitRunnninOn64 = Is32BitProcessRunningInWow64();
   return xpOrHigher && !winPE && !is32BitRunnninOn64;
 
@@ -889,7 +889,7 @@ bool CVssWrapper::EndsWith(LPCTSTR wsz, size_t maxLength, TCHAR wchar)
 {
     wstring s(wsz); 
 
-    int length = s.length(); 
+    size_t length = s.length(); 
 
     if (length == 0)
     {

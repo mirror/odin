@@ -1,3 +1,12 @@
+version 0.21 (2009-03-05)
+========================
+Changes:
+ - Prepare 64-Bit version (Code changes to avoid warnings and errors)
+
+Bug fixes:
+ - Fix bug with version check for VSS support (failing on Win Server 2003 and others)
+ - Fix bug with backup of entire disk, only used blocks if the disk contains unmounted partitions
+
 version 0.2 (2009-01-16)
 ========================
 Changes:

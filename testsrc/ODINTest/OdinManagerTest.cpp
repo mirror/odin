@@ -72,7 +72,7 @@ public:
     fileName += buf;
   }
 
-  virtual int AskUserForMissingFile(LPCWSTR missingFileName, unsigned fileNo, std::wstring& newName) {
+  virtual size_t AskUserForMissingFile(LPCWSTR missingFileName, unsigned fileNo, std::wstring& newName) {
     return IDCANCEL;
   }
 };

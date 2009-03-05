@@ -68,7 +68,7 @@ void CODINSplitManagerCallback::GetFileName(unsigned fileNo, std::wstring& fileN
   wchar_t buf[10];
   wsprintf(buf, L"%04u", fileNo);
 
-  int lastDotPos = fileName.rfind(L'.');
+  size_t lastDotPos = fileName.rfind(L'.');
   if (lastDotPos < 0)
     fileName += buf;
   else {
@@ -79,11 +79,11 @@ void CODINSplitManagerCallback::GetFileName(unsigned fileNo, std::wstring& fileN
   }
 }
 
-int CODINSplitManagerCallback::AskUserForMissingFile(LPCWSTR missingFileName, unsigned fileNo, wstring& newName)
+size_t CODINSplitManagerCallback::AskUserForMissingFile(LPCWSTR missingFileName, unsigned fileNo, wstring& newName)
 {
   WTL::CString msg;
   WTL::CString filter;
-  int res;
+  size_t res;
   wchar_t* buffer;
   msg.FormatMessage(IDS_PROVIDE_FILENAME, fileNo);
   filter.LoadString(IDS_FILTERSTRING);
@@ -110,7 +110,7 @@ void CODINSplitManagerCallback::RemoveTrailingNumberFromFileName(wstring& fileNa
   const int noTrailingDigits = 4; // name is generated in the form c:\Folder\NameNNNN.ext n=4
 
 
-  int lastDotPos = fileName.rfind(L'.');
+  size_t lastDotPos = fileName.rfind(L'.');
   if (lastDotPos < 0)
     lastDotPos = fileName.length();
   
@@ -387,8 +387,8 @@ void CODINDlg::BrowseFilesWithFileOpenDialog()
 void CODINDlg::GetSplitFilePattern(LPCWSTR path, wstring& filePattern)
 {
   wstring dir;
-  int off;
-  int count = 0;
+  size_t off;
+  size_t count = 0;
 
   filePattern = path;
   fSplitCB.GetFileName(0, filePattern);
@@ -405,8 +405,8 @@ void CODINDlg::GetSplitFilePattern(LPCWSTR path, wstring& filePattern)
 void CODINDlg::GetEntireDiskFilePattern(LPCWSTR path, wstring& filePattern)
 {
   wstring dir;
-  int off;
-  int count = 0;
+  size_t off;
+  size_t count = 0;
 
   filePattern = path;
   off = filePattern.rfind(L'\\');
@@ -427,7 +427,8 @@ bool CODINDlg::CheckUniqueFileName(LPCWSTR path, LPCWSTR filePattern, bool useCo
   list<wstring> files;
   list <wstring>::iterator itBegin, itEnd;
   bool success = true;
-  int off, count = 0;
+  size_t off;
+  int count = 0;
 
   off = dir.rfind(L'\\');
   if (off != string::npos)
@@ -721,7 +722,7 @@ void CODINDlg::GetDirFromFileName(const wstring& fileName, wstring& dir)
     dir.clear();
   }
   wstring absPath(buffer, len);
-  int pos = absPath.rfind(L'\\');
+  size_t pos = absPath.rfind(L'\\');
   if (pos == string::npos) {
       ATLTRACE("Error in getting current directory for abs path %S", absPath);
       dir.clear();
@@ -742,13 +743,15 @@ void CODINDlg::GetDriveFromFileName(const wstring& fileName, wstring& drive)
     drive.clear();
   }
   wstring absPath(buffer, len);
-  int pos = absPath.find(L'\\');
+  size_t pos = absPath.find(L'\\');
   if (pos == string::npos) {
       ATLTRACE("Error in getting current directory for abs path %S", absPath);
       drive.clear();
   } else {
     drive = absPath.substr(0, pos+1);
   }
+  // convert always to uppercase to be compatible with drive info
+  transform(drive.begin(), drive.end(), drive.begin(), (int (*)(int))toupper);
 }
 
 void CODINDlg::GetFreeBytesOfDisk(LPCWSTR dir, unsigned __int64* freeBytesAvailable, unsigned __int64* totalNumberOfBytes)
@@ -849,7 +852,11 @@ int CODINDlg::CheckConditionsForSavePartition(const wstring& fileName, int index
   for (int i=0; i<partitionsToSave; i++) {
     // warning: do not use same drive for source and destination
     wstring sourceDrive = pContainedVolumes[i]->GetMountPoint();
-    if (sourceDrive.compare(targetDrive) == 0) {
+    if (sourceDrive.empty() ) {
+      res = AtlMessageBox(m_hWnd, IDS_UNMOUNTED_VOLUME, IDS_WARNING, MB_ICONEXCLAMATION | MB_OKCANCEL);
+      if (res != IDOK)
+        return res;
+    } else if (sourceDrive.compare(targetDrive) == 0) {
       res = AtlMessageBox(m_hWnd, IDS_NOTSAMEDRIVE, IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
       if (res != IDOK)
         return res;
@@ -1259,7 +1266,7 @@ void CODINDlg::GenerateFileNameForMBRBackupFile(wstring &volumeFileName)
       return;
     
     mbrFileName = volumeFileName;
-    int pos = mbrFileName.rfind(L'.');
+    size_t pos = mbrFileName.rfind(L'.');
     if (mbrFileName.length() - pos == 4) {
       if (mbrFileName.substr(pos) != mbrExt) {
         mbrFileName = mbrFileName.substr(0, pos);
@@ -1311,8 +1318,8 @@ bool CODINDlg::TestIsHardDiskImage(const wchar_t* fileName)
 void CODINDlg::GenerateFileNameForEntireDiskBackup(wstring &volumeFileName /*out*/, LPCWSTR imageFileNamePattern, const wstring& partitionDeviceName)
 {
   wstring tmp(imageFileNamePattern);
-  int pos = partitionDeviceName.rfind(L"Partition");
-  int posDot = tmp.rfind(L'.');
+  size_t pos = partitionDeviceName.rfind(L"Partition");
+  size_t posDot = tmp.rfind(L'.');
   if (posDot == string::npos)
     posDot = tmp.length();
   wstring ext(tmp.substr(posDot));
@@ -1430,11 +1437,11 @@ void CODINDlg::BackupPartitionOrDisk(int index, LPCWSTR fileName)
         DisableControlsWhileProcessing();
         GenerateFileNameForEntireDiskBackup(volumeFileName, fileName, pContainedVolumes[i]->GetDeviceName());
 
-        fOdinManager.SavePartition(fOdinManager.GetDriveList()->GetIndexOfDrive(pContainedVolumes[i]->GetMountPoint().c_str()),
+        fOdinManager.SavePartition(fOdinManager.GetDriveList()->GetIndexOfDeviceName(pContainedVolumes[i]->GetDeviceName()),
           volumeFileName.c_str(), fOdinManager.GetSplitSize() ? &fSplitCB : NULL);
         ATLTRACE(L"Found sub-partition: %s\n", pContainedVolumes[i]->GetDisplayName().c_str());
-        statusText.FormatMessageW(IDS_STATUS_BACKUP_DISK_PROGRESS, i, subPartitions);
-        fStatusBar.SetWindowTextW(statusText);
+        statusText.FormatMessage(IDS_STATUS_BACKUP_DISK_PROGRESS, i+1, subPartitions);
+        fStatusBar.SetWindowText(statusText);
         WaitUntilDone();
       }
 
@@ -1449,8 +1456,12 @@ void CODINDlg::BackupPartitionOrDisk(int index, LPCWSTR fileName)
       DisableControlsWhileProcessing();
       // save drive to file
       fOdinManager.SavePartition(index, fileName, &fSplitCB);
-      statusText.LoadString(isHardDisk ? IDS_STATUS_BACKUP_DISK_PROGRESS: IDS_STATUS_BACKUP_PARTITION_PROGRESS);
-      fStatusBar.SetWindowTextW(statusText);
+      if (isHardDisk) {
+        statusText.FormatMessageW(IDS_STATUS_BACKUP_DISK_PROGRESS, 1, 1);
+      } else {
+        statusText.LoadString(IDS_STATUS_BACKUP_PARTITION_PROGRESS);
+      }
+      fStatusBar.SetWindowText(statusText);
       // now wait until all threads are finished, but do not block the UI.
       WaitUntilDone();
     }
@@ -1510,7 +1521,7 @@ void CODINDlg::RestorePartitionOrDisk(int index, LPCWSTR fileName)
       fSplitCB.RemoveTrailingNumberFromFileName(volumeFileName);
       GetNoFilesAndFileSize(volumeFileName.c_str(), fileCount, fileSize, isEntireDriveImagefile);
       fOdinManager.RestorePartition(volumeFileName.c_str(), volumeIndex, fileCount, fileSize, fileCount>0 ? &fSplitCB : NULL);
-      statusText.FormatMessageW(IDS_STATUS_RESTORE_DISK_PROGRESS, i, subPartitions);
+      statusText.FormatMessageW(IDS_STATUS_RESTORE_DISK_PROGRESS, i+1, subPartitions);
       fStatusBar.SetWindowTextW(statusText);
       WaitUntilDone();
     }
@@ -1519,7 +1530,11 @@ void CODINDlg::RestorePartitionOrDisk(int index, LPCWSTR fileName)
 		  // restore file to drive
       fOdinManager.RestorePartition(baseName.c_str(), index, fileCount, fileSize, &fSplitCB);
       // now wait until all threads are finished, but do not block the UI.
-      statusText.LoadString(pDriveInfo->IsCompleteHardDisk() ? IDS_STATUS_RESTORE_DISK_PROGRESS : IDS_STATUS_RESTORE_PARTITION_PROGRESS);
+      if (pDriveInfo->IsCompleteHardDisk()) {
+        statusText.FormatMessageW(IDS_STATUS_RESTORE_DISK_PROGRESS, 1, 1);
+      } else {
+        statusText.LoadString(IDS_STATUS_RESTORE_PARTITION_PROGRESS);
+      }
       fStatusBar.SetWindowTextW(statusText);
       WaitUntilDone();
   }
@@ -1867,7 +1882,7 @@ LRESULT CODINDlg::OnBnClickedBtVerify(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 LRESULT CODINDlg::OnBnClickedBtOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
   COptionsDlg optionsDlg(fOdinManager);
-  int res = optionsDlg.DoModal();
+  size_t res = optionsDlg.DoModal();
 
   return 0;
 }

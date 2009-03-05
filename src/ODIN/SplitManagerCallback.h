@@ -30,5 +30,5 @@
 class ISplitManagerCallback {
 public:
   virtual void GetFileName(unsigned fileNo, std::wstring& fileName) = 0;
-  virtual int AskUserForMissingFile(LPCWSTR missingFileName, unsigned fileNo, std::wstring& newName) = 0;
+  virtual size_t AskUserForMissingFile(LPCWSTR missingFileName, unsigned fileNo, std::wstring& newName) = 0;
 };

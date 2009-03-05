@@ -40,6 +40,9 @@
 // Comment out this line to build the project with different versions of VC++ and ATL.
 #define _WTL_SUPPORT_SDK_ATL3
 
+// There is a warning when compiling with VS2008 and later, to avoid define...
+#define _CRT_NON_CONFORMING_SWPRINTFS
+
 // Support for VS2005 Express & SDK ATL
 #ifdef _WTL_SUPPORT_SDK_ATL3
   #define _CRT_SECURE_NO_DEPRECATE
@@ -51,16 +54,26 @@
 
 // Support for VS2005 Express & SDK ATL
 #ifdef _WTL_SUPPORT_SDK_ATL3
-  namespace ATL
+// !!!!!!!!!!!!!
+// for 64-Bit change the definitions AllocStdCallThunk and FreeStdCallThunk (now in stdafx.h):
+// see: http://www.zabkat.com/blog/26Oct08-x64-development-with-VS6-and-ATL3.htm
+// All that's left is a slight but important change to ATLBASE.H so that thunks will run from executable memory avoiding DEP faults, which are not tolerated in 64 bit windows versions. You must comment out the definitions of AllocStdCallThunk and FreeStdCallThunk and replace them with:
+// !!!!!!!!!!!!!
+namespace ATL
   {
 	inline void * __stdcall __AllocStdCallThunk()
 	{
-		return ::HeapAlloc(::GetProcessHeap(), 0, sizeof(_stdcallthunk));
+	  // return ::HeapAlloc(::GetProcessHeap(), 0, sizeof(_stdcallthunk));
+      // change to be compatible with 64-Bit see comment above
+      return ::VirtualAlloc(0, sizeof(_stdcallthunk), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	}
 
 	inline void __stdcall __FreeStdCallThunk(void *p)
 	{
-		::HeapFree(::GetProcessHeap(), 0, p);
+	  // ::HeapFree(::GetProcessHeap(), 0, p);
+      // change to be compatible with 64-Bit
+      // change to be compatible with 64-Bit see comment above
+      ::VirtualFree(p, 0, MEM_RELEASE);
 	}
   };
 #endif // _WTL_SUPPORT_SDK_ATL3
