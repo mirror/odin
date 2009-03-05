@@ -242,8 +242,8 @@ if (!bSuccess)
 unsigned CDriveInfo::GetDiskNumber()
 {
   unsigned no;
-  int pos1 = fDeviceName.find(L"Harddisk") + 8;
-  int pos2 = fDeviceName.find(L'\\', pos1);
+  size_t pos1 = fDeviceName.find(L"Harddisk") + 8;
+  size_t pos2 = fDeviceName.find(L'\\', pos1);
   no = _wtoi(fDeviceName.substr(pos1, pos2-pos1).c_str());
   return no;
 }

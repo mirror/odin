@@ -158,7 +158,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	ATLASSERT(SUCCEEDED(hRes));
 
-	int nRet = 0;
+	INT_PTR nRet = 0;
 	// BLOCK: Run application
 	{
     CSplashDlg splashDlg;
@@ -176,7 +176,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
  _CrtMemCheckpoint(&stateEnd);
  _CrtMemDumpAllObjectsSince( &stateBegin );
 #endif
-	return nRet;
+	return (int) nRet;
 }
 
 #else // modal window

@@ -447,14 +447,15 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
     memset(&partInfo, 0, sizeof(partInfo));
     res = DeviceIoControl(fHandle, IOCTL_DISK_GET_PARTITION_INFO, NULL, 0, &partInfo2, sizeof(partInfo2), &dummy, NULL);
     CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_PARTITION_INFO_EX and IOCTL_DISK_GET_PARTITION_INFO");
-    fKnownPartitionType = partInfo2.RecognizedPartition != 0;
     fPartitionType = partInfo2.PartitionType;
   }
   else {
     CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_DRIVE_GEOMETRY");
-    fKnownPartitionType = (partInfo.PartitionStyle == PARTITION_STYLE_MBR) && partInfo.Mbr.RecognizedPartition != 0;
     fPartitionType = partInfo.Mbr.PartitionType;
   }
+
+  fIsMounted = DeviceIoControl(fHandle, FSCTL_IS_VOLUME_MOUNTED, NULL, 0, NULL, 0, &dummy, NULL) != FALSE;
+    
   res = DeviceIoControl(fHandle, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &lengthInfo, sizeof(lengthInfo), &dummy, NULL);
   CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_LENGTH_INFO");
   res = DeviceIoControl(fHandle, IOCTL_DISK_GET_DRIVE_GEOMETRY	, NULL, 0, &diskGeometry, sizeof(diskGeometry), &dummy, NULL);

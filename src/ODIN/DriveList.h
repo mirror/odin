@@ -43,10 +43,11 @@ class CDriveInfo {
 		 return fDisplayName;
 	 }
      
-	 const std::wstring& GetDeviceName() const {
+  const std::wstring& GetDeviceName() const {
 		 return fDeviceName;
 	 }
 
+   // return the drive in form "X:\" with the letter always in uppercase
    const std::wstring& GetMountPoint() const {
 		 return fMountPoint;
 	 }

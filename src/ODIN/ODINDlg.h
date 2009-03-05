@@ -53,7 +53,7 @@ public:
     fhWnd = hWnd;
   }
   virtual void GetFileName(unsigned fileNo, std::wstring& fileName);
-  virtual int AskUserForMissingFile(LPCWSTR missingFileName, unsigned fileNo, std::wstring& newName);
+  virtual size_t AskUserForMissingFile(LPCWSTR missingFileName, unsigned fileNo, std::wstring& newName);
   void RemoveTrailingNumberFromFileName(wstring& fileName); 
 
   void SetBaseName(LPCWSTR baseName)
@@ -87,7 +87,7 @@ private:
   __int64 fBytesProcessed;
   unsigned fSpeed; // bytes per second of write speed
   unsigned fThreadCount; // number of threads in use
-  UINT fTimer;
+  UINT_PTR fTimer;
   CODINSplitManagerCallback fSplitCB;
   DWORD fCrc32FromFileHeader; // checksum contained in file header of image file 
   bool fVerifyRun; // a check run to verify the result was started

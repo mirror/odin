@@ -11,14 +11,17 @@
 		<Platform
 			Name="Win32"
 		/>
+		<Platform
+			Name="x64"
+		/>
 	</Platforms>
 	<ToolFiles>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)\$(ConfigurationName)"
-			IntermediateDirectory="$(SolutionDir)\$(ConfigurationName)\$(ProjectName)"
+			OutputDirectory="$(ConfigurationName)-$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)-$(PlatformName)\$(ProjectName)"
 			ConfigurationType="1"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
@@ -51,7 +54,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="C:\DevTools\atl30;c:\devtools\wtl80\include"
+				AdditionalIncludeDirectories="C:\DevTools\atl30\include;c:\devtools\wtl80\include"
 				PreprocessorDefinitions="WIN32;STRICT;DEBUG"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -59,6 +62,7 @@
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="stdafx.h"
 				WarningLevel="3"
+				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="4"
 			/>
 			<Tool
@@ -108,9 +112,103 @@
 			/>
 		</Configuration>
 		<Configuration
+			Name="Debug|x64"
+			OutputDirectory="$(ConfigurationName)-$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)-$(PlatformName)\$(ProjectName)"
+			ConfigurationType="1"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+				CommandLine="&#x0D;&#x0A;"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="false"
+				TargetEnvironment="3"
+				GenerateStublessProxies="true"
+				TypeLibraryName="$(IntDir)/ODIN.tlb"
+				HeaderFileName="ODIN.h"
+				DLLDataFileName=""
+				InterfaceIdentifierFileName="ODIN_i.c"
+				ProxyFileName="ODIN_p.c"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="C:\DevTools\atl30\include;c:\devtools\wtl80\include"
+				PreprocessorDefinitions="WIN64;STRICT;DEBUG"
+				MinimalRebuild="true"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="stdafx.h"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="false"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+				AdditionalIncludeDirectories="&quot;$(IntDir)&quot;;c:\devtools\wtl80\include"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="version.lib shlwapi.lib"
+				LinkIncremental="2"
+				AdditionalLibraryDirectories="C:\devtools\atl30\lib\amd64"
+				UACExecutionLevel="2"
+				GenerateDebugInformation="true"
+				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+				AdditionalManifestFiles="$(ProjectDir)\ODIN.exe.manifest"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)\$(ConfigurationName)"
-			IntermediateDirectory="$(SolutionDir)\$(ConfigurationName)\$(ProjectName)"
+			OutputDirectory="$(ConfigurationName)-$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)-$(PlatformName)\$(ProjectName)"
 			ConfigurationType="1"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
@@ -144,13 +242,14 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="C:\DevTools\atl30;c:\devtools\wtl80\include"
+				AdditionalIncludeDirectories="C:\DevTools\atl30\include;c:\devtools\wtl80\include"
 				PreprocessorDefinitions="WIN32;STRICT"
 				ExceptionHandling="1"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="stdafx.h"
 				WarningLevel="3"
+				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="0"
 			/>
 			<Tool
@@ -176,6 +275,100 @@
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
 				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|x64"
+			OutputDirectory="$(ConfigurationName)-$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)-$(PlatformName)\$(ProjectName)"
+			ConfigurationType="1"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+				Description="Increment Build Number"
+				CommandLine="set BUILDNO=0&#x0D;&#x0A;for /F &quot;usebackq&quot; %%i in (&quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;) do set BUILDNO=%%i&#x0D;&#x0A;set /A BUILDNO=%BUILDNO%+1&#x0D;&#x0A;@echo %BUILDNO% &gt; &quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;&#x0D;&#x0A;@echo // buildnumber.h generated file to count buildnumber &gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBER %BUILDNO% &gt;&gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBERSTR &quot;%BUILDNO%&quot; &gt;&gt;&quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;"
+				ExcludedFromBuild="false"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="false"
+				TargetEnvironment="3"
+				GenerateStublessProxies="true"
+				TypeLibraryName="$(IntDir)/ODIN.tlb"
+				HeaderFileName="ODIN.h"
+				DLLDataFileName=""
+				InterfaceIdentifierFileName="ODIN_i.c"
+				ProxyFileName="ODIN_p.c"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="C:\DevTools\atl30\include;c:\devtools\wtl80\include"
+				PreprocessorDefinitions="WIN64;STRICT"
+				ExceptionHandling="1"
+				RuntimeLibrary="0"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="stdafx.h"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="false"
+				DebugInformationFormat="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+				AdditionalIncludeDirectories="$(IntDir);&quot;c:\devtools\wtl80\include&quot;"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="version.lib shlwapi.lib"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="C:\devtools\atl30\lib\amd64"
+				UACExecutionLevel="2"
+				GenerateDebugInformation="false"
+				SubSystem="2"
+				LinkTimeCodeGeneration="1"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -315,7 +508,23 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -512,7 +721,27 @@
 				/>
 			</FileConfiguration>
 			<FileConfiguration
+				Name="Debug|x64"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Copying license file"
+					CommandLine="copy &quot;$(InputPath)&quot; &quot;$(OutDir)\license.html&quot;&#x0D;&#x0A;"
+					Outputs="&quot;$(OutDir)\license.html&quot;"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
 				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Copying license file"
+					CommandLine="copy &quot;$(InputPath)&quot; &quot;$(OutDir)\license.html&quot;&#x0D;&#x0A;"
+					Outputs="&quot;$(OutDir)\license.html&quot;"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|x64"
 				>
 				<Tool
 					Name="VCCustomBuildTool"

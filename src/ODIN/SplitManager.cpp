@@ -161,7 +161,7 @@ void CSplitManager::SwitchFile (unsigned newFileNo) {
   IImageStream::TOpenMode mode = fStream->GetOpenMode();
   GetFileName(newFileNo, newName);
   fStream->Close();
-  int res;
+  size_t res;
 
 again:
   try {
