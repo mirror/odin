@@ -215,9 +215,9 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				Description="Increment Build Number"
-				CommandLine="set BUILDNO=0&#x0D;&#x0A;for /F &quot;usebackq&quot; %%i in (&quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;) do set BUILDNO=%%i&#x0D;&#x0A;set /A BUILDNO=%BUILDNO%+1&#x0D;&#x0A;@echo %BUILDNO% &gt; &quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;&#x0D;&#x0A;@echo // buildnumber.h generated file to count buildnumber &gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBER %BUILDNO% &gt;&gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBERSTR &quot;%BUILDNO%&quot; &gt;&gt;&quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;"
-				ExcludedFromBuild="true"
+				Description=""
+				CommandLine=""
+				ExcludedFromBuild="false"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -269,7 +269,7 @@
 				AdditionalDependencies="version.lib shlwapi.lib"
 				LinkIncremental="1"
 				UACExecutionLevel="2"
-				GenerateDebugInformation="false"
+				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
 				SubSystem="2"
 				LinkTimeCodeGeneration="1"
@@ -297,6 +297,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Increment Build Number"
+				CommandLine="set BUILDNO=0&#x0D;&#x0A;for /F &quot;usebackq&quot; %%i in (&quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;) do set BUILDNO=%%i&#x0D;&#x0A;set /A BUILDNO=%BUILDNO%+1&#x0D;&#x0A;@echo %BUILDNO% &gt; &quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;&#x0D;&#x0A;@echo // buildnumber.h generated file to count buildnumber &gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBER %BUILDNO% &gt;&gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBERSTR &quot;%BUILDNO%&quot; &gt;&gt;&quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -309,8 +311,8 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				Description="Increment Build Number"
-				CommandLine="set BUILDNO=0&#x0D;&#x0A;for /F &quot;usebackq&quot; %%i in (&quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;) do set BUILDNO=%%i&#x0D;&#x0A;set /A BUILDNO=%BUILDNO%+1&#x0D;&#x0A;@echo %BUILDNO% &gt; &quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;&#x0D;&#x0A;@echo // buildnumber.h generated file to count buildnumber &gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBER %BUILDNO% &gt;&gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBERSTR &quot;%BUILDNO%&quot; &gt;&gt;&quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;"
+				Description=""
+				CommandLine=""
 				ExcludedFromBuild="false"
 			/>
 			<Tool
@@ -364,7 +366,7 @@
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="C:\devtools\atl30\lib\amd64"
 				UACExecutionLevel="2"
-				GenerateDebugInformation="false"
+				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
 				SubSystem="2"
 				LinkTimeCodeGeneration="1"
@@ -392,6 +394,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Increment Build Number"
+				CommandLine="set BUILDNO=0&#x0D;&#x0A;for /F &quot;usebackq&quot; %%i in (&quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;) do set BUILDNO=%%i&#x0D;&#x0A;set /A BUILDNO=%BUILDNO%+1&#x0D;&#x0A;@echo %BUILDNO% &gt; &quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;&#x0D;&#x0A;@echo // buildnumber.h generated file to count buildnumber &gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBER %BUILDNO% &gt;&gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBERSTR &quot;%BUILDNO%&quot; &gt;&gt;&quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
