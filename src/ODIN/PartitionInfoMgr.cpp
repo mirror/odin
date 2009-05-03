@@ -170,8 +170,8 @@ void CPartitionInfoMgr::WritePartitionInfoToDisk(const wchar_t* driveName)
   // Set extended read mode for disks in Vista (fails on Win XP, no problem in Vista)
   res = DeviceIoControl(hDisk, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0, &dummy, NULL);
   // if (res == 0)
-  //  ; // no error checking here because a failure always occurs on Win XP
-  
+  //  ; // no error checking here because a failure always occurs on Win XP: code 87 illegal parameter
+
   res = SetFilePointer(hDisk, 0, NULL, FILE_BEGIN);
   if (res == INVALID_SET_FILE_POINTER)
     THROW_OS_EXC_PARAM1((int)::GetLastError(), EWinException::seekError, driveName);
@@ -215,6 +215,8 @@ void CPartitionInfoMgr::ReadPartitionInfoFromFile(const wchar_t* fileName)
   hDisk = CreateFile(fileName, access, shareMode, NULL, createMode, FILE_ATTRIBUTE_NORMAL, NULL);
   CHECK_OS_EX_HANDLE_PARAM1(hDisk, EWinException::fileOpenError, fileName);
 
+  Reset();
+
   // Read file header
   res = ReadFile(hDisk, &header, sizeof(header), &sizeRead, NULL);
   CHECK_OS_EX_PARAM1(res, EWinException::readFileError, L"");
@@ -238,7 +240,6 @@ void CPartitionInfoMgr::ReadPartitionInfoFromFile(const wchar_t* fileName)
   res = SetFilePointer(hDisk, header.partInfoOffset, NULL, FILE_BEGIN);
   if (res == INVALID_SET_FILE_POINTER)
     THROW_OS_EXC_PARAM1((int)::GetLastError(), EWinException::seekError, fileName);
-  Reset();
   fBuffer = new BYTE[header.partInfoLength];
   res = ReadFile(hDisk, fBuffer, header.partInfoLength, &sizeRead, NULL);
   CHECK_OS_EX_PARAM1(res, EWinException::readFileError, L"");
