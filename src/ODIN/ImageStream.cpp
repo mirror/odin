@@ -429,8 +429,7 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
     ntStatus = OpenDevice(shareMode);
     if (0 != ntStatus) {
       Sleep(1000);
-      // sometimes on a disk with 3 partitions this calls fails on the 3rd partition...(?)
-      // just try again after a little pause
+        // sometimes this calls fails just try again after a little pause
       ntStatus = OpenDevice(shareMode);
     }
     CHECK_KERNEL_EX_HANDLE_PARAM1(ntStatus, EWinException::volumeOpenError, fName.c_str());
@@ -512,7 +511,13 @@ void CDiskImageStream::Close()
     // only supported on NTFS not on FAT
     bool isRawDisk = fName.find(L"Partition0") != std::string::npos;
     if ( fOpenMode == forWriting && !isRawDisk) {
-      OpenDevice(0);
+      long ntStatus = OpenDevice(0);
+      if (0 != ntStatus) {
+        Sleep(1000);
+        // sometimes this calls fails just try again after a little pause
+        ntStatus = OpenDevice(0);
+      }
+      CHECK_KERNEL_EX_HANDLE_PARAM1(ntStatus, EWinException::volumeOpenError, fName.c_str());
       ZeroMemory(&volData, sizeof(volData));
       res = DeviceIoControl(fHandle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, 0, &volData, sizeof(volData), &dummy, NULL);
       LONGLONG newVolSize = fSize / fBytesPerCluster;
