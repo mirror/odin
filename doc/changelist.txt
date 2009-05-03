@@ -1,3 +1,8 @@
+Version 0.22 (2009-05-03)
+=========================
+Changes:
+ - fix bug with restoring boot code when restoring an entire disk from .mbr file
+
 version 0.21 (2009-03-05)
 ========================
 Changes:
