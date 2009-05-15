@@ -215,7 +215,6 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				Description=""
 				CommandLine=""
 				ExcludedFromBuild="false"
 			/>
@@ -299,6 +298,7 @@
 				Name="VCPostBuildEventTool"
 				Description="Increment Build Number"
 				CommandLine="set BUILDNO=0&#x0D;&#x0A;for /F &quot;usebackq&quot; %%i in (&quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;) do set BUILDNO=%%i&#x0D;&#x0A;set /A BUILDNO=%BUILDNO%+1&#x0D;&#x0A;@echo %BUILDNO% &gt; &quot;$(SolutionDir)\BUILDNUMBER.TXT&quot;&#x0D;&#x0A;@echo // buildnumber.h generated file to count buildnumber &gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBER %BUILDNO% &gt;&gt; &quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;@echo #define BUILDNUMBERSTR &quot;%BUILDNO%&quot; &gt;&gt;&quot;$(SolutionDir)\src\ODIN\buildnumber.h&quot;&#x0D;&#x0A;"
+				ExcludedFromBuild="true"
 			/>
 		</Configuration>
 		<Configuration
@@ -311,7 +311,6 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				Description=""
 				CommandLine=""
 				ExcludedFromBuild="false"
 			/>
@@ -415,6 +414,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\CmdLineException.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\CommandLineProcessor.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\CompressedRunLengthStream.cpp"
 				>
 			</File>
@@ -459,6 +466,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\FileNameUtil.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\ImageStream.cpp"
 				>
 			</File>
@@ -468,6 +479,10 @@
 			</File>
 			<File
 				RelativePath=".\src\ODIN\InternalException.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\MultiPartitionHandler.cpp"
 				>
 			</File>
 			<File
@@ -488,6 +503,10 @@
 			</File>
 			<File
 				RelativePath=".\src\ODIN\OSException.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\ParamChecker.cpp"
 				>
 			</File>
 			<File
@@ -539,6 +558,14 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\UserFeedbackConsole.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\Util.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\VSSException.cpp"
 				>
 			</File>
@@ -565,6 +592,18 @@
 			</File>
 			<File
 				RelativePath=".\src\ODIN\buildnumber.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\CmdLineException.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\CmdLineParser.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\CommandLineProcessor.h"
 				>
 			</File>
 			<File
@@ -620,6 +659,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\FileNameUtil.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\IImageStream.h"
 				>
 			</File>
@@ -640,6 +683,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\MultiPartitionHandler.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\ODINDlg.h"
 				>
 			</File>
@@ -657,6 +704,10 @@
 			</File>
 			<File
 				RelativePath=".\src\ODIN\OSException.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\ParamChecker.h"
 				>
 			</File>
 			<File
@@ -685,6 +736,22 @@
 			</File>
 			<File
 				RelativePath=".\src\ODIN\Thread.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\UserFeedback.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\UserFeedbackConsole.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\UserFeedbackGUI.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\Util.h"
 				>
 			</File>
 			<File

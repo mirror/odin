@@ -140,8 +140,8 @@ void CDecompressionThread::DecompressLoopZlib()
     fTargetQueueCompressed->ReleaseChunk(readChunk);
   if (decompressChunk != NULL) {
     decompressChunk->SetSize (decompressChunk->GetMaxSize() - zsStream.avail_out); // zsStream.total_out);
-    fTargetQueueDecompressed->ReleaseChunk(decompressChunk); 
     decompressChunk->SetEOF(true);
+    fTargetQueueDecompressed->ReleaseChunk(decompressChunk); 
   }
 }
 
@@ -202,8 +202,8 @@ void CDecompressionThread::DecompressLoopLibz2()
     fTargetQueueCompressed->ReleaseChunk(readChunk);
   if (decompressChunk != NULL) {
     decompressChunk->SetSize (decompressChunk->GetMaxSize() - bzStream.avail_out); // bzStream.total_out);
-    fTargetQueueDecompressed->ReleaseChunk(decompressChunk); 
     decompressChunk->SetEOF(true);
+    fTargetQueueDecompressed->ReleaseChunk(decompressChunk); 
   }
 }
 

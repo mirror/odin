@@ -36,6 +36,7 @@ LPCWSTR Exception::sExceptionCategoriesDescription[] = {
   L"Internal Exception",          // InternalException
   L"File Format Exception",       // FileFormatException
   L"Volume Shadow Service Exception", // VSSException
+  L"Command Line Exception",      // CommandLineException
 };
 
 LPCWSTR Exception::sUnknownCategory = L"unknown category";

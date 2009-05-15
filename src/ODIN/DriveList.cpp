@@ -172,6 +172,18 @@ if (!bSuccess)
         fBytes = 0; fSectors = 0; fBytesPerSector = 0; fSectorsPerTrack = 0; fDriveType = driveUnknown;
         fKnownType = fReadable = false;
       }
+
+      // get volumen name:
+      if (fMountPoint.length() > 0) {
+        const DWORD cBufLen = MAX_PATH+1;
+        DWORD serNo, maxCompLen, fsFlags; 
+        wchar_t volName[cBufLen];
+        bSuccess = GetVolumeInformation(fMountPoint.c_str(), volName, cBufLen, &serNo, &maxCompLen, &fsFlags, NULL, 0);
+        if (bSuccess)
+          fVolName = volName;
+        else
+          ATLTRACE(L"Failed to get volume information for %s.\n", fMountPoint.c_str());
+      }
     } else { 
       fBytes = 0; fSectors = 0; fBytesPerSector = 0; fSectorsPerTrack = 0; fDriveType = driveUnknown;
       fKnownType = fReadable = false;
@@ -384,6 +396,10 @@ CDriveList::CDriveList(bool ShowProgress)
     }  
     // watchAll.Stop();
     // watchAll.TraceTime(L"Refreshing all devices");
+  
+    // As a last step sort the list of devices, because multiple calls to create this list result
+    // in different sequences
+    Sort();
   }  
 }
 
@@ -395,6 +411,20 @@ CDriveList::~CDriveList()
   for (unsigned n = 0; n < fDriveList.size(); n++)
     delete fDriveList[n];
 } 
+//---------------------------------------------------------------------------
+
+class CDriveInfoComparator
+{
+    public: bool operator() (CDriveInfo* a, CDriveInfo* b)
+    {
+      return a->GetDeviceName().compare(b->GetDeviceName()) < 0;
+    }
+};
+
+void CDriveList::Sort() {
+  sort(fDriveList.begin(), fDriveList.end(), CDriveInfoComparator()); 
+
+}
 
 //---------------------------------------------------------------------------
 

@@ -52,6 +52,10 @@ class CDriveInfo {
 		 return fMountPoint;
 	 }
 
+   const std::wstring& GetVolumeName() const {
+		 return fVolName;
+	 }
+
    TDeviceType GetDriveType() const {
 		 return fDriveType;
 	 }
@@ -125,7 +129,7 @@ class CDriveInfo {
  private:
 
   private:
-    std::wstring fDisplayName, fDeviceName, fMountPoint;
+    std::wstring fDisplayName, fDeviceName, fMountPoint, fVolName;
     TDeviceType fDriveType;
     __int64 fBytes, fSectors;
     unsigned __int64 fUsedBytes;
@@ -173,6 +177,9 @@ class CDriveList {
   // fill the array pVolumes with all contained volumes of pDriveInfo, pDriveInfo must point to
   // a harddisk device otherwise the function does nothing, return the number of found volumes
   int GetVolumes(const CDriveInfo* pDriveInfo, CDriveInfo** pVolumes, int volumeCount) const;
+
+private:
+  void Sort();
 };
 //---------------------------------------------------------------------------
 #endif

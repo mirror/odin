@@ -44,6 +44,10 @@
 #define IDS_DRIVE                       165
 #define IDS_SIZE                        166
 #define IDS_NAME                        167
+#define IDS_TYPE                        168
+#define IDS_VOLNAME                     169
+#define IDS_VERSION_32_BIT              170
+#define IDS_VERSION_64_BIT              171
 #define IDD_DIALOG_SETTINGS             201
 #define IDD_ODIN_MAIN                   202
 #define IDD_OPTIONS                     204
@@ -78,6 +82,7 @@
 #define IDC_BT_NO_SPLIT                 1037
 #define IDC_BT_SPLIT_CHUNK              1038
 #define IDC_ED_CHUNK_SIZE               1039
+#define IDC_PLATFORM                    1040
 #define IDC_STATIC_MESSAGE              1041
 #define IDC_CHECK_NOTDISPLAYAGAIN       1042
 #define IDC_EDIT_MESSAGE                1044
@@ -86,8 +91,18 @@
 #define IDC_CREDITS                     1047
 #define IDC_HYPER                       1048
 #define IDC_BT_SNAPSHOT                 1052
-#define ATL_TYPE                        0x3020
-#define IDS_TYPE                        0x3020
+#define IDS_ERRCMDLINE_NO_OPERATION     57346
+#define IDS_ERRCMDLINE_UNKNOWN_OPTION   57347
+#define IDS_ERRCMDLINE_USAGE            57348
+#define IDS_ERRCMDLINE_WRONG_COMPRESSION 57349
+#define IDS_ERRCMDLINE_NO_TARGET        57350
+#define IDS_ERRCMDLINE_NO_SOURCE        57351
+#define IDS_ERRCMDLINE_WRONG_SOURCE     57352
+#define IDS_ERRCMDLINE_WRONG_TARGET     57353
+#define IDS_ERRCMDLINE_WRONG_INDEX      57354
+#define IDS_ERRCMDLINE_BACKUP_PARAM_ERROR 57355
+#define IDS_ERRCMDLINE_RESTORE_PARAM_ERROR 57356
+#define IDS_ERRCMDLINE_VERIFY_PARAM_ERROR 57357
 #define ID_BT_OPTIONS                   57665
 #define ID_BT_BROWSE                    57666
 #define IDS_PARTITION_FAT12             61403
@@ -105,11 +120,12 @@
 #define IDS_STATUS_OPERATION_CANCELLED  61415
 #define IDS_STATUS_BACKUP_PARTITION_PROGRESS 61416
 #define IDS_STATUS_RESTORE_PARTITION_PROGRESS 61417
-#define IDS_STATUS_BACKUP_DISK_PROGRESS       61418
-#define IDS_STATUS_RESTORE_DISK_PROGRESS      61419
-#define IDS_STATUS_VERIFY_PROGRESS            61420 
-#define IDS_STATUS_RESTORE_MBR_PROGRESS       61421 
-#define IDS_STATUS_TAKE_SNAPSHOT              61422
+#define IDS_STATUS_BACKUP_DISK_PROGRESS 61418
+#define IDS_STATUS_RESTORE_DISK_PROGRESS 61419
+#define IDS_STATUS_VERIFY_PROGRESS      61420
+#define IDS_STATUS_RESTORE_MBR_PROGRESS 61421
+#define IDS_STATUS_TAKE_SNAPSHOT        61422
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED

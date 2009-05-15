@@ -510,7 +510,7 @@ void CDiskImageStream::Close()
     // resize partition if necessary and supported (we must close device first and then open again otherwise it fails)
     // only supported on NTFS not on FAT
     bool isRawDisk = fName.find(L"Partition0") != std::string::npos;
-    if ( fOpenMode == forWriting && !isRawDisk) {
+    if ( fOpenMode == forWriting && !isRawDisk && fBytesPerCluster ) {
       long ntStatus = OpenDevice(0);
       if (0 != ntStatus) {
         Sleep(1000);

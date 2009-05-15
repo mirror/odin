@@ -36,8 +36,9 @@
 class Exception
 {
 public:
-  const static int cNoExceptionTypes = 5;
-  typedef enum ExceptionCategory {OSException, CompressionException, InternalException, FileFormatException, VSSException };
+  const static int cNoExceptionTypes = 6;
+  typedef enum ExceptionCategory {OSException, CompressionException, InternalException, FileFormatException, 
+    VSSException, CmdLineException };
 
   Exception(ExceptionCategory cat)
     : fCategory(cat)

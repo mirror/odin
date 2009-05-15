@@ -40,6 +40,21 @@ using namespace std;
 CPPUNIT_TEST_SUITE_REGISTRATION( ODINManagerTest );
 
 // Test setup class:
+class DummyWaitCallback: public IWaitCallback {
+public:
+  virtual void OnThreadTerminated()
+  {}
+  virtual void OnFinished()
+  {}
+  virtual void OnAbort()
+  {}
+  virtual void OnPartitionChange(int i, int n)
+  {}
+  virtual void OnPrepareSnapshotBegin()
+  {}
+  virtual void OnPrepareSnapshotReady()
+  {}
+};
 
   // section name in .ini file for configuration values
 IMPL_SECTION(ODINManagerTest, L"ODINManagerTest")
@@ -297,8 +312,6 @@ void ODINManagerTest::ODINManagerTestVSS()
   bool oldVSS = fUseVSS;
   if (!fEnableTest) 
     return;
-  HRESULT hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
-  CPPUNIT_ASSERT(SUCCEEDED(hr));
 
   cout << "ODINManagerTestVSS NTFS gzip used blocks with using Volume Shadow Copy..." << endl;
   const wstring testImageFileName(L"NTFSCompUsedBlocksVSS.img");
@@ -320,8 +333,6 @@ void ODINManagerTest::ODINManagerTestVSSEntireDisk()
   bool oldVSS = fUseVSS;
   if (!fEnableTest) 
     return;
-  HRESULT hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
-  CPPUNIT_ASSERT(SUCCEEDED(hr));
 
   cout << "ODINManagerVSSTestEntireDisk NTFS gzip used blocks with using Volume Shadow Copy..." << endl;
   const wstring testImageFileName(L"NTFSCompUsedBlocksDiskVSS.img");
@@ -368,8 +379,9 @@ void ODINManagerTest::ODINManagerTestTemplatePartition(TFileSystem fileSystem, L
   wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test drive before restoring image: " << fImageDrive().c_str() << endl;
   if (fUseFormatDrive)
     FormatTestDrive(fImageDrive().c_str(), fileSystem, volumeLabel); // cleaner but more time consuming
-  else
+  else {
     DeleteAllFiles(fImageDrive().c_str());
+  }
   fMgr.RefreshDriveList(); // after reformatting cluster size might have changed!
   driveList = fMgr.GetDriveList();
   int index = driveList->GetIndexOfDrive(fImageDrive().c_str());
@@ -392,8 +404,11 @@ void ODINManagerTest::ODINManagerTestTemplatePartition(TFileSystem fileSystem, L
   wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test drive before restoring image: " << fImageDrive().c_str() << endl;
   if (fUseFormatDrive)
     FormatTestDrive(fImageDrive().c_str(), fileSystem, volumeLabel); // cleaner but more time consuming
-  else
+  else {
+    wstring zeroFile = fImageDrive() + L"\\ZeroFile.dat";
+    CopyEmptyFile(zeroFile.c_str());
     DeleteAllFiles(fImageDrive().c_str());
+  }
   // Step 7:
   Sleep(fSleepTime); // otherwise we get a share conflict, seems that some files are not yet closed
   wcout << L"Restore image from: " << imageFile << endl;
@@ -498,11 +513,11 @@ void ODINManagerTest::ODINManagerTestTemplateEntireDisk(const wstring& harddiskD
   CPPUNIT_ASSERT_MESSAGE("Configuration error: hard disk device name for back/restore test not found", (int)indexHardDisk >= 0);
 
   // Step 1:
-  wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test drive before restoring image: " << harddiskDevice << endl;
+  wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test disk before restoring image: " << harddiskDevice << endl;
   if (fUseFormatDrive)
     FormatTestDriveMultiple(driveCount, drives, fileSystems, L"UnitTest");
   else
-    DeleteAllFilesMultiple(driveCount, drives);
+    DeleteAllFilesMultiple(driveCount, drives, false);
 
   // Step 2:
   wcout << L"Copying test files from " << harddiskDevice << endl;
@@ -519,14 +534,14 @@ void ODINManagerTest::ODINManagerTestTemplateEntireDisk(const wstring& harddiskD
   wcout << L"Create volume image from " << harddiskDevice << L" and save in " << imageFile << endl;
   CreateMultipleDriveImages(indexHardDisk, imageFile, splitFiles);
   // Step 6:
-  wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test drive before restoring image: " << harddiskDevice << endl;
+  wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test disk before restoring image: " << harddiskDevice << endl;
 
   DWORD dummyval = GetLogicalDrives(); // dummy call just to mount all volumes. This is needed otherwise
                                         // we run into some strange errors when openeing the device again
   if (fUseFormatDrive)
     FormatTestDriveMultiple(driveCount, drives, fileSystems, L"UnitTest");
   else
-    DeleteAllFilesMultiple(driveCount, drives);
+    DeleteAllFilesMultiple(driveCount, drives, true);
 
   // Step 7:
   Sleep(fSleepTime); // otherwise we get a share conflict, seems that some files are not yet closed
@@ -716,9 +731,11 @@ bool ODINManagerTest::CalcCrc32Multiple(unsigned driveCount, const wchar_t** dri
   bool ok = true;
 
   for (unsigned i=0; i<driveCount && ok; i++) {
-    driveRootPath = drives[i];
-    driveRootPath += L"\\";
-    ok = CalcCrc32(driveRootPath.c_str(), crc);
+    if (drives[i] != NULL && drives[i][0] != '\0') {
+      driveRootPath = drives[i];
+      driveRootPath += L"\\";
+      ok = CalcCrc32(driveRootPath.c_str(), crc);
+    }
   }
   return ok;
 }
@@ -743,9 +760,11 @@ void ODINManagerTest::FormatTestDriveMultiple(unsigned driveCount, const wchar_t
   wstring driveRootPath;
 
   for (unsigned i=0; i<driveCount; i++) {
-    driveRootPath = drives[i];
-    driveRootPath += L"\\";
-    FormatTestDrive(driveRootPath.c_str(), fileSystems[i], L"");
+    if (drives[i] != NULL && drives[i][0] != '\0') {
+      driveRootPath = drives[i];
+      driveRootPath += L"\\";
+      FormatTestDrive(driveRootPath.c_str(), fileSystems[i], L"");
+    }
   }
 }
 
@@ -831,7 +850,8 @@ void ODINManagerTest::CopyTestFiles(const wchar_t* srcFolder, const wchar_t* des
 void ODINManagerTest::CopyTestFilesMultiple(unsigned driveCount, const wchar_t** drives)
 {
   for (unsigned i=0; i<driveCount; i++) {
-    CopyTestFiles(L"", drives[i]);
+    if (drives[i] != NULL && drives[i][0] != '\0') 
+      CopyTestFiles(L"", drives[i]);
   }
 }
 
@@ -874,9 +894,11 @@ void ODINManagerTest::DeleteSomeFilesMultiple(unsigned driveCount, const wchar_t
   wstring driveRootPath;
 
   for (unsigned i=0; i<driveCount; i++) {
-    driveRootPath = drives[i];
-    driveRootPath += L"\\";
-    DeleteSomeFiles(driveRootPath.c_str());
+    if (drives[i] != NULL && drives[i][0] != '\0') {
+      driveRootPath = drives[i];
+      driveRootPath += L"\\";
+      DeleteSomeFiles(driveRootPath.c_str());
+    }
   }
 }
 
@@ -913,23 +935,31 @@ void ODINManagerTest::DeleteAllFiles(LPCWSTR startDir)
   }
 }
 
-void ODINManagerTest::DeleteAllFilesMultiple(unsigned driveCount, const wchar_t** drives)
+void ODINManagerTest::DeleteAllFilesMultiple(unsigned driveCount, const wchar_t** drives, bool erase)
 {
   wstring driveRootPath;
 
   for (unsigned i=0; i<driveCount; i++) {
-    driveRootPath = drives[i];
-    driveRootPath += L"\\";
-    DeleteAllFiles(driveRootPath.c_str());
+    if (drives[i] != NULL && drives[i][0] != '\0') {
+      driveRootPath = drives[i];
+      driveRootPath += L"\\";
+      DeleteAllFiles(driveRootPath.c_str());
+      if (erase) {
+        wstring zeroFile = driveRootPath + L"\\ZeroFile.dat";
+        CopyEmptyFile(zeroFile.c_str());
+        DeleteAllFiles(driveRootPath.c_str());
+      }
+    }
   }
 }
 
 void ODINManagerTest::CreateDriveImage(int driveListIndex, LPCWSTR imageFileName, bool splitFiles)
 {
   CSplitManagerCallback cb;
+  DummyWaitCallback wcb;
 
   try {
-    fMgr.SavePartition(driveListIndex, imageFileName, splitFiles ? &cb : NULL);
+    fMgr.SavePartition(driveListIndex, imageFileName, splitFiles ? &cb : NULL, &wcb);
     if (fUseVSS) {
       CDriveInfo* pDriveInfo = fMgr.GetDriveList()->GetItem(driveListIndex);
       fCreateDeleteThread = new CCreateDeleteThread(pDriveInfo->GetMountPoint().c_str());
@@ -938,7 +968,7 @@ void ODINManagerTest::CreateDriveImage(int driveListIndex, LPCWSTR imageFileName
   } catch (Exception& e) {
     wstring msg = L"CreateDriveImage failed with exception: ";
     msg += e.GetMessage();
-    fMgr.Terminate(true);
+    fMgr.Terminate(/*true*/);
     wcout << msg.c_str() << endl;
     CPPUNIT_FAIL("CreateDriveImage failed with exception");
   }
@@ -952,11 +982,12 @@ void ODINManagerTest::CreateMultipleDriveImages(int driveListIndex, LPCWSTR imag
   CDriveInfo **pContainedVolumes = NULL;
   int subPartitions = pDriveInfo->GetContainedVolumes();
   wstring volumeFileName;
+  DummyWaitCallback wcb;
 
   CPPUNIT_ASSERT_MESSAGE("CreateMultipleDriveImages called for a non-hard disk", isHardDisk);
   try {
     if (fUseVSS)
-      fMgr.MakeSnapshot(driveListIndex);
+      fMgr.MakeSnapshot(driveListIndex, &wcb);
 
     int subPartitions = pDriveInfo->GetContainedVolumes();
     pContainedVolumes = new CDriveInfo* [subPartitions];
@@ -964,9 +995,9 @@ void ODINManagerTest::CreateMultipleDriveImages(int driveListIndex, LPCWSTR imag
     for (int i=0; i<subPartitions; i++) {
       GenerateFileNameForEntireDiskBackup(volumeFileName, imageFileNamePattern, pContainedVolumes[i]);
 
-      fMgr.SavePartition(fMgr.GetDriveList()->GetIndexOfDrive(pContainedVolumes[i]->GetMountPoint().c_str()), volumeFileName.c_str(), splitFiles ? &cb : NULL);
+      fMgr.SavePartition(fMgr.GetDriveList()->GetIndexOfDeviceName(pContainedVolumes[i]->GetDeviceName()), volumeFileName.c_str(), splitFiles ? &cb : NULL, &wcb);
       ATLTRACE(L"Found sub-partition: %s\n", pContainedVolumes[i]->GetDisplayName().c_str());
-      if (fUseVSS)
+      if (fUseVSS && !pContainedVolumes[i]->GetMountPoint().empty())
         fCreateDeleteThread = new CCreateDeleteThread(pContainedVolumes[i]->GetMountPoint().c_str());
       WaitUntilDone();
     }
@@ -976,7 +1007,7 @@ void ODINManagerTest::CreateMultipleDriveImages(int driveListIndex, LPCWSTR imag
   } catch (Exception& e) {
     wstring msg = L"CreateDriveImage failed with exception: ";
     msg += e.GetMessage();
-    fMgr.Terminate(true);
+    fMgr.Terminate(/*true*/);
     wcout << msg.c_str() << endl;
     CPPUNIT_FAIL("CreateDriveImage failed with exception");
   }
@@ -988,6 +1019,7 @@ void ODINManagerTest::RestoreAllDrivesImage(int driveListIndex, LPCWSTR imageFil
   CSplitManagerCallback cb;
   CDriveInfo **pContainedVolumes = NULL;
   wstring volumeFileName;
+  DummyWaitCallback wcb;
 
   try {
     CDriveInfo* pDiskInfo = fMgr.GetDriveList()->GetItem(driveListIndex);
@@ -997,7 +1029,7 @@ void ODINManagerTest::RestoreAllDrivesImage(int driveListIndex, LPCWSTR imageFil
     for (int i=0; i<subPartitions; i++) {
       ATLTRACE(L"Found sub-partition: %s\n", pContainedVolumes[i]->GetDisplayName().c_str());
       GenerateFileNameForEntireDiskBackup(volumeFileName, imageFileNamePattern, pContainedVolumes[i]);
-      int volumeIndex = fMgr.GetDriveList()->GetIndexOfDrive(pContainedVolumes[i]->GetMountPoint().c_str());
+      int volumeIndex = fMgr.GetDriveList()->GetIndexOfDeviceName(pContainedVolumes[i]->GetDeviceName());
 
       unsigned fileCount = 0;  
       unsigned __int64 fileSize = 0;
@@ -1012,13 +1044,13 @@ void ODINManagerTest::RestoreAllDrivesImage(int driveListIndex, LPCWSTR imageFil
         fileSize = fileStream.GetImageFileHeader().GetFileSize();
         fileStream.Close();
       }
-      fMgr.RestorePartition(volumeFileName.c_str(), volumeIndex, fileCount, fileSize, fileCount>0 ? &cb : NULL);
+      fMgr.RestorePartition(volumeFileName.c_str(), volumeIndex, fileCount, fileSize, fileCount>0 ? &cb : NULL, &wcb);
       WaitUntilDone();
     }
   } catch (Exception& e) {
     wstring msg = L"RestoreDriveImage failed with exception: ";
     msg += e.GetMessage();
-    fMgr.Terminate(true);
+    fMgr.Terminate(/*true*/);
     wcout << msg.c_str() << endl;
     CPPUNIT_FAIL("RestoreDriveImage failed with exception");
   }
@@ -1028,14 +1060,15 @@ void ODINManagerTest::RestoreAllDrivesImage(int driveListIndex, LPCWSTR imageFil
 void ODINManagerTest::RestoreDriveImage(int driveListIndex, LPCWSTR imageFileName, unsigned fileCount, __int64 fileSize)
 {
   CSplitManagerCallback cb;
+  DummyWaitCallback wcb;
 
   try {
-    fMgr.RestorePartition(imageFileName, driveListIndex, fileCount, fileSize, fileCount>0 ? &cb : NULL);
+    fMgr.RestorePartition(imageFileName, driveListIndex, fileCount, fileSize, fileCount>0 ? &cb : NULL, &wcb);
     WaitUntilDone();
   } catch (Exception& e) {
     wstring msg = L"RestoreDriveImage failed with exception: ";
     msg += e.GetMessage();
-    fMgr.Terminate(true);
+    fMgr.Terminate(/*true*/);
     wcout << msg.c_str() << endl;
     CPPUNIT_FAIL("RestoreDriveImage failed with exception");
   }
@@ -1074,7 +1107,7 @@ void ODINManagerTest::WaitUntilDone()
         wcout << L"Thread terminated" << endl;
       if (--threadCount == 0)  {
         wcout << L"...Operation completed all worker threads terminated" << endl;
-        fMgr.Terminate(false); // work is finished
+        fMgr.Terminate(/*false*/); // work is finished
         break;
       }
       // setup new array with the remaining threads:
@@ -1105,8 +1138,8 @@ void ODINManagerTest::WaitUntilDone()
 void ODINManagerTest::GenerateFileNameForEntireDiskBackup(wstring &volumeFileName /*out*/, LPCWSTR imageFileNamePattern, CDriveInfo* pPartitionInfo)
 {
   wstring tmp(imageFileNamePattern);
-  int pos = pPartitionInfo->GetDeviceName().rfind(L"Partition");
-  int posDot = tmp.rfind(L'.');
+  size_t pos = pPartitionInfo->GetDeviceName().rfind(L"Partition");
+  size_t posDot = tmp.rfind(L'.');
   wstring ext(tmp.substr(posDot));
   volumeFileName = tmp.substr(0, posDot);
   volumeFileName += L"-";
@@ -1168,6 +1201,34 @@ bool ODINManagerTest::CopyFile(LPCWSTR srcPath, LPCWSTR destPath)
   ok = CloseHandle(hOutput);
   ok = CloseHandle(hInput);
   return bReadSuccess && bWriteSuccess;
+ }
+
+bool ODINManagerTest::CopyEmptyFile(LPCWSTR destPath)
+{
+  // Copy a big file (900MB) with zero blocks to erase a lot of blocks on the disk 
+  HANDLE hOutput;
+  DWORD dwBytesToRead = 1024 * 1024;
+  DWORD dwBytesWritten;
+  BYTE *buffer;
+  BOOL ok, bWriteSuccess;
+
+  hOutput= CreateFile(destPath, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); 
+  if (INVALID_HANDLE_VALUE == hOutput)
+    return false;
+
+  buffer = new BYTE[dwBytesToRead];
+  ZeroMemory(buffer, dwBytesToRead);
+  for (int i=0; i<100; i++)
+  {
+     bWriteSuccess= WriteFile(hOutput, buffer, dwBytesToRead, &dwBytesWritten, NULL); 
+     if (!bWriteSuccess || dwBytesToRead != dwBytesWritten)
+       break;
+  } 
+
+  delete buffer;
+
+  ok = CloseHandle(hOutput);
+  return bWriteSuccess!=0;
  }
 
 //======================================================================

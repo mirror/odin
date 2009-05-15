@@ -46,7 +46,17 @@ http://msdn.microsoft.com/newsgroups/default.aspx?dg=microsoft.public.win32.prog
 my post:
 http://msdn.microsoft.com/newsgroups/default.aspx?dg=microsoft.public.win32.programmer.kernel&tid=7830f105-9515-4e54-a907-e86970647525&p=1
 
-========================================================================
+========================================================================^
+Command Line Parsers:
+http://www.codeproject.com/KB/cpp/cma.aspx
+http://www.codeproject.com/KB/recipes/ccmdline.aspx
+http://www.codeproject.com/KB/cpp/OOCmdLine.aspx
+http://www.codeproject.com/KB/cpp/pc.aspx
+
+========================================================================^
+
+
+
 other:
 Worker Threads:
 

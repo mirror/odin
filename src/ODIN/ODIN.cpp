@@ -33,6 +33,7 @@
 #include "resource.h"
 #include "ODINDlg.h"
 #include "Config.h"
+#include "CommandLineProcessor.h"
 
 #ifdef DEBUG
   #define new DEBUG_NEW
@@ -158,17 +159,30 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	ATLASSERT(SUCCEEDED(hRes));
 
+
 	INT_PTR nRet = 0;
 	// BLOCK: Run application
 	{
-    CSplashDlg splashDlg;
-    if (splashDlg.MustDisplay())
-      splashDlg.DoModal();
+    // Process command line
+    CCommandLineProcessor cp;
+    bool hasCommandLine = lpstrCmdLine != NULL && *lpstrCmdLine!=L'\0';
+    if (hasCommandLine)
+    {
+      bool consoleApp = cp.InitConsole(hasCommandLine);
+      if (consoleApp) {
+        // Process command line
+        nRet = cp.ParseAndProcess();
+      }
+    } else {
+      // Open main window
+      CSplashDlg splashDlg;
+      if (splashDlg.MustDisplay())
+        splashDlg.DoModal();
 
-		CODINDlg dlgMain;
-		nRet = dlgMain.DoModal();
-	}
-
+		  CODINDlg dlgMain;
+		  nRet = dlgMain.DoModal();
+	  }
+    }
 	_Module.Term();
 	::CoUninitialize();
 
@@ -235,3 +249,4 @@ int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	return nRet;
 }
 
+//---------------------------------------------------------------------------------

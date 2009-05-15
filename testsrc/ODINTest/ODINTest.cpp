@@ -35,10 +35,15 @@
 using namespace std;
 
 DECLARE_SECTION_GLOBAL(L"ODINTest");
+CAppModule _Module;
 
 int _tmain(int argc, _TCHAR* argv[])
 {
   USES_CONVERSION;
+
+  HRESULT hRes = ::CoInitialize(NULL);
+  hRes = _Module.Init(NULL, GetModuleHandle(NULL));
+
   // initialize ini file to read config settings for test and for ConfigTest
   CfgFileInitialize(L"ODINTest.ini", true);
 
@@ -78,6 +83,7 @@ int _tmain(int argc, _TCHAR* argv[])
   // Return error code 1 if the one of test failed.
   //cout << "Press <return> to continue...";
   //char ch = cin.get();
+  _Module.Term();
   return wasSuccessful ? 0 : 1; 
 
 }

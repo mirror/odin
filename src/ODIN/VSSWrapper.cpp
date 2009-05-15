@@ -39,6 +39,11 @@ using namespace std;
 #define CHECK_HRESULT(hr, msg) CHECK_COM_ERROR((hr), EVSSException::vssError, (msg));
 #define THROW_VSS_ERROR(msg) (GetLastError(), EVSSException::vssError, (msg));
 
+#ifdef DEBUG
+  #define new DEBUG_NEW
+  #define malloc DEBUG_MALLOC
+#endif // _DEBUG
+
 //=======================================================================================================
 class CWriterComponent
 {
