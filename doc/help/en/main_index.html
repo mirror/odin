@@ -26,11 +26,19 @@ An image can only be restored to a partition of exactly the same size as
 the original partition. ODIN will allow you to restore to a bigger partition
 but this may result in a corrupt file system. Sometimes you may be able to 
 repair this using tools like chkdsk, sometimes it may be unusable.
-</p>
+<p>
 
 <h2>
-Usage:
+  Usage:
 </h2>
+<p>
+ODIN comes in two flavors. You can either use the graphical user interface
+or the command line interface. If you start <code>ODIN.exe</code> without any parameters
+on the command line the main window opens. If you want to use a command line
+interface in a console application you start <code>ODINC.exe</code>. The required parameters
+and possible actions are described in the usage section.
+</p>
+  
 <h3><a name="backup">
 Backup a partition:
 </a></h3>
@@ -102,7 +110,7 @@ control screen will appear after start.
 Aborting a process
 </a></h2>
 <p>
-By pressing the Exit button you can abort any running operation. When aborting
+By pressing the Cancel button you can abort any running operation. When aborting
 a restore operation the target drive will be in an unusable state so that you 
 will need to reformat it before you can use it again.
 </p>
@@ -163,5 +171,93 @@ exceeds the given file size the image file will be split and the file names
 are appended with a sequence number. This is useful for example if you later
 want to save the files to CDs or DVDs.
 </p>
+
+<h2>
+  <a name="usage">
+    Usage of the command line interface:
+  </a>
+</h2>
+  <p>
+    The command line interface consists of an operation a source and target plus
+    options. Operations are list, backup, restore or verify. Source and targets are
+    (depending on the operation) either file names or device names. Device names
+    always start with a <code>\Device</code> prefix. If a file name or path contains spaces
+    enclose it in double quotes. You can avoid typing the lengthy device names by
+    providing an index instead of a device name. An index is just a number (0..n).
+    How index numbers are mapping to device names can be seen using the <code>-list</code>
+    command (no parameters). For the list of available options see the command
+    <code>-usage</code> (no parameters). The <code>-force</code> options suppresses all 
+    security confirmations.
+    This is an extremely dangerous option, you can erase complete hard disks without
+    any warnings in this case. The intended use is for using ODIN in batch scripts
+    that run in unattended mode. <br/>
+    <h4>Examples:</h4>
+    <pre>
+      odinc -backup -source=\Device\Harddisk2\Partition1 -target=c:\MyDisk.img -comment="Backup of drive F"
+    </pre>
+    Creates a backup of the first partition on the second disk to file <code>c:\MyDisk.img </code>
+  </p>
+  <p>    
+    <pre>
+      odinc -backup -source=3 -target=c:\MyDisk.img -comment="Backup of drive F"
+    </pre>
+    Creates a backup of device with index 3 to file <code>c:\MyDisk.img. </code> Use <code>
+    odinc -list </code>
+    </pre> to see which device belongs to index 3:
+    <pre>
+      odinc -list
+      ...
+      Index: 3
+      Device Name: \Device\Harddisk2\Partition1
+      Drive: F:\
+      Label: Volume
+      Type: Harddisk
+      Size: 9.766GB
+      ...
+    </pre>
+  </p>
+  <p>      
+    <pre>
+      odinc -restore -source=c:\MyDisk.img -target=\Device\Harddisk2\Partition1
+    </pre>
+    Restores first partition on second disk from file <code>c:\MyDisk.img </code>
+  </p>
+  <p>
+    All available options can be seen with the usage command <code>odinc -usage:</code>
+    <pre>
+      Usage:
+      ODIN [operation] [options] -source=[name] -target=[name]
+      [operation] is one of -backup, -restore, -verify or -list
+      [options] are:
+      -compression=[bzip|gzip|none]   use bzip, gzip or no compression
+      -makeSnapshot    make snapshot (VSS) before backup (implies -usedBlocks)
+      -usedBlocks      copy only used blocks of volume
+      -allBlocks       copy all blocks of volume
+      -split=[nnn]     split image file every [nnn] MB
+      -comment=[string] add comment to image file for backup
+      [name]    name can be a device name like \Device\Harddisk0\Partition0 or
+      a file name like c:\DiskCImage.dat or a number that refers to
+      an index from the -list command
+      -backup   creates an image from a disk or volume to a file
+      -restore  restores a disk image from a file to a volume or disk
+      -verify   checks an image for damage
+      -list     prints a list of available volumes on this machine
+      -force    suppress all warning messages and continue immediately (very
+      dangerous!)
+
+      Examples:
+      ODIN -backup -usedBlocks -compression=gzip -source=1 -target=myimage.dat
+      backups volume number 1 to image file myimage.dat with gzip compression
+      and only used blocks (1 refers to index 1 of devices from output of -list)
+      ODIN -restore -source=myimage.dat -target=\Device\Harddisk0\Partition0
+      restores image from file myimage.dat to first partition of first disk
+      ODIN -list
+      prints all availaible volumes and disks with their name and number
+
+      WARNING:
+      USING THIS PROGRAM CAN DESTROY THE COMPLETE CONTENTS OF YOUR HARD DISK!!!
+      Be sure that you know and have understood what you are doing or stop now!
+    </pre>    
+  </p>  
 </body>
 </html>

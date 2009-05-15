@@ -31,6 +31,7 @@
 #include "stdafx.h"
 #include <atlctrls.h>
 #include <atlctrlx.h>
+#include <atlmisc.h>
 #include <string>
 #include <sstream>
 #include "AboutDlg.h"
@@ -50,9 +51,17 @@ LRESULT CAboutDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 {
 	CenterWindow(GetParent());
   CStatic versionBox(GetDlgItem(IDC_VERNO));
-
+  CStatic platformBox(GetDlgItem(IDC_PLATFORM));
+  WTL::CString platform;
+  
   GetVersionFromResource();
   versionBox.SetWindowTextW(versionNumber.c_str());
+
+  if (sizeof(void*)==8)
+    platform.LoadString(IDS_VERSION_64_BIT);
+  else if (sizeof(void*)==4)
+    platform.LoadString(IDS_VERSION_32_BIT);
+  platformBox.SetWindowTextW(platform);
 
   CStatic creditsBox(GetDlgItem(IDC_CREDITS));
   /* Not painted correctly if multiline*/

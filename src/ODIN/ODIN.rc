@@ -67,7 +67,8 @@ CAPTION "Set Options"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     CONTROL         "Save only used blocks",IDC_BT_USED_BLOCKS,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,15,17,150,15
-    CONTROL         "Save only used blocks and take snapshot",IDC_BT_SNAPSHOT,"Button", BS_AUTORADIOBUTTON,15,30,150,15
+    CONTROL         "Save only used blocks and take snapshot",IDC_BT_SNAPSHOT,
+                    "Button",BS_AUTORADIOBUTTON,15,30,150,15
     CONTROL         "Save all blocks",IDC_BT_ALL_BLOCKS,"Button",BS_AUTORADIOBUTTON,15,45,150,15
     CONTROL         "No Compression",IDC_BT_NO_COMPRESSION,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,15,79,113,15
     CONTROL         "GZip Compression",IDC_BT_COMPRESSION_GZIP,"Button",BS_AUTORADIOBUTTON,15,92,113,15
@@ -165,8 +166,9 @@ BEGIN
     DEFPUSHBUTTON   "OK",IDOK,132,10,50,14
     CTEXT           "ODIN Open Disk Imager in a Nutshell\n\nCopyright (C) 2008\n This program is licensed under the GNU Public License v3",IDC_STATIC,41,11,78,63
     ICON            IDD_ODIN_MAIN,IDC_STATIC,10,8,20,20,SS_CENTERIMAGE
-    LTEXT           "Version:",IDC_STATIC,37,109,26,8
-    LTEXT           "",IDC_VERNO,67,109,52,8,SS_SUNKEN
+    LTEXT           "Version:",IDC_STATIC,37,100,26,10
+    LTEXT           "",IDC_VERNO,67,100,52,10,SS_SUNKEN
+    LTEXT           "Platform",IDC_PLATFORM,65,115,50,10
     PUSHBUTTON      "Lic. Details...",IDC_BUTTON_LICENSE,131,42,50,14
     LTEXT           "",IDC_CREDITS,10,143,162,101,SS_SUNKEN | WS_TABSTOP
     LTEXT           "Credits:",IDC_STATIC,76,131,24,8
@@ -262,8 +264,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,2,2,BUILDNUMBER
- PRODUCTVERSION 0,2,2,BUILDNUMBER
+ FILEVERSION 0,3,0,BUILDNUMBER
+ PRODUCTVERSION 0,3,0,BUILDNUMBER
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -279,12 +281,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "FileDescription", "ODIN Executable Module"
-            VALUE "FileVersion", "0, 2, 2, " BUILDNUMBERSTR
+            VALUE "FileVersion", "0, 3, 0, " BUILDNUMBERSTR
             VALUE "InternalName", "ODIN"
             VALUE "LegalCopyright", "Copyright 2009 Licensed under the GNU GPL License."
             VALUE "OriginalFilename", "ODIN.exe"
             VALUE "ProductName", "ODIN"
-            VALUE "ProductVersion", "0, 2, 2, " BUILDNUMBERSTR
+            VALUE "ProductVersion", "0, 3, 0, " BUILDNUMBERSTR
         END
     END
     BLOCK "VarFileInfo"
@@ -390,6 +392,25 @@ END
 STRINGTABLE 
 BEGIN
     ATL_IDS_IDLEMESSAGE     "Ready"
+    IDS_ERRCMDLINE_NO_OPERATION 
+                            "Error no operation given. You must provide one of -backup, -restore, -verify or -list"
+    IDS_ERRCMDLINE_UNKNOWN_OPTION "Unknown option on command line."
+    IDS_ERRCMDLINE_USAGE    "Print ODIN -usage for list of command line options."
+    IDS_ERRCMDLINE_WRONG_COMPRESSION 
+                            "Error: Wrong compression format, must be one of gzip, bzip or none"
+    IDS_ERRCMDLINE_NO_TARGET "Error: No target given."
+    IDS_ERRCMDLINE_NO_SOURCE "Error: No source given."
+    IDS_ERRCMDLINE_WRONG_SOURCE 
+                            "Error: Illegal name of source device, file or index"
+    IDS_ERRCMDLINE_WRONG_TARGET 
+                            "Error: Illegal name of target device, file or index"
+    IDS_ERRCMDLINE_WRONG_INDEX 
+                            "Illegal index of drive list, use /list to see available drives"
+    IDS_ERRCMDLINE_BACKUP_PARAM_ERROR 
+                            "Backup requires a device as source and a file name as target"
+    IDS_ERRCMDLINE_RESTORE_PARAM_ERROR 
+                            "Restore requires a file name as source and a device as target"
+    IDS_ERRCMDLINE_VERIFY_PARAM_ERROR "Verify requires a file name as source"
 END
 
 STRINGTABLE 
@@ -410,6 +431,18 @@ BEGIN
     IDS_DRIVE_TYPE_UNKNOWN  "Unknown"
     IDS_WAITUPDATEDRIVES    "Please wait while drive list is being updated."
     IDS_DIALOGTITLE         "ODIN - Open Disk Imager in a Nutshell"
+    IDS_STATUS_OPERATION_COMPLETED "Operation completed successfully."
+    IDS_STATUS_OPERATION_CANCELLED "Operation was cancelled."
+    IDS_STATUS_BACKUP_PARTITION_PROGRESS "Backup partition in progress..."
+    IDS_STATUS_RESTORE_PARTITION_PROGRESS "Restore partition in progress..."
+    IDS_STATUS_BACKUP_DISK_PROGRESS 
+                            "Backup disk in progress (%1!d! of %2!d! partitions)..."
+    IDS_STATUS_RESTORE_DISK_PROGRESS 
+                            "Restore disk in progress (%1!d! of %2!d! partitions)..."
+    IDS_STATUS_VERIFY_PROGRESS "Verify image file in progress..."
+    IDS_STATUS_RESTORE_MBR_PROGRESS "Restoring MBR and partition information."
+    IDS_STATUS_TAKE_SNAPSHOT 
+                            "Taking snapshot of volume or disk (please wait!)..."
 END
 
 STRINGTABLE 
@@ -430,6 +463,10 @@ BEGIN
     IDS_4GBLIMITEXCEEDED    "The file size of the resulting image may exceed the limit of 4GB on FAT32. Do you want to continue?"
     IDS_SPLITSIZETOOSMALL   "The size for splitting image files must be at least %s. Please increase value in options dialog."
     IDS_CANCEL              "Cancel"
+END
+
+STRINGTABLE 
+BEGIN
     IDS_INCOMPLETE_IMAGE    "The image file %s used to restore the partition is incomplete and can not be used."
     IDS_UNMOUNTED_VOLUME    "The disk contains an unmounted volume. This will be backuped with all blocks."
 END
@@ -444,20 +481,10 @@ BEGIN
     IDS_DRIVE               "Drive"
     IDS_SIZE                "Size"
     IDS_NAME                "Name"
-END
-
-STRINGTABLE 
-BEGIN
+    IDS_VOLNAME             "Label"
     IDS_TYPE                "Type"
-    IDS_STATUS_OPERATION_COMPLETED          "Operation completed successfully."
-    IDS_STATUS_OPERATION_CANCELLED          "Operation was cancelled."
-    IDS_STATUS_BACKUP_PARTITION_PROGRESS    "Backup partition in progress..."
-    IDS_STATUS_RESTORE_PARTITION_PROGRESS   "Restore partition in progress..."
-    IDS_STATUS_BACKUP_DISK_PROGRESS         "Backup disk in progress (%1!d! of %2!d! partitions)..."
-    IDS_STATUS_RESTORE_DISK_PROGRESS        "Restore disk in progress (%1!d! of %2!d! partitions)..."
-    IDS_STATUS_VERIFY_PROGRESS              "Verify image file in progress..."
-    IDS_STATUS_RESTORE_MBR_PROGRESS         "Restoring MBR and partition information."
-    IDS_STATUS_TAKE_SNAPSHOT                "Taking snapshot of volume or disk (please wait!)..."
+    IDS_VERSION_64_BIT      "64-Bit Version"
+    IDS_VERSION_32_BIT      "32-Bit Version"
 END
 
 #endif    // English (U.S.) resources

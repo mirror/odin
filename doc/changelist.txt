@@ -1,7 +1,21 @@
+Version 0.30 (2009-05-15)
+=========================
+Changes:
+ - Introduce command line interface and odinc.exe as command line application
+ - Display volume label in device list
+ - 64-Bit version of ODIN
+
+Bug fixes:
+ - Resolve threading issue causing sometimes hangs when restoring or verifying
+ - resolve VSS error (inappropriate state for this function) when backing up an
+   entire disk with snapshot that contains an unmounted volume
+
+
 Version 0.22 (2009-05-03)
 =========================
 Changes:
  - fix bug with restoring boot code when restoring an entire disk from .mbr file
+
 
 version 0.21 (2009-03-05)
 ========================
@@ -11,6 +25,7 @@ Changes:
 Bug fixes:
  - Fix bug with version check for VSS support (failing on Win Server 2003 and others)
  - Fix bug with backup of entire disk, only used blocks if the disk contains unmounted partitions
+
 
 version 0.2 (2009-01-16)
 ========================
@@ -28,12 +43,14 @@ Bug fixes:
  - cancel a running backup or restore causes memory leak
  - detect incomplete written files before restore
 
+
 Version 0.12 (2008-11-10)
 ============
 Changes:
 
 Bug fixes:
  -Split file option does not work
+
 
 version 0.11 (2008-10-24)
 ============

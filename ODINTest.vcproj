@@ -355,6 +355,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\CmdLineException.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\CommandLineProcessor.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\CompressedRunLengthStream.cpp"
 				>
 			</File>
@@ -411,11 +419,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\MultiPartitionHandler.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\OdinManager.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\src\ODIN\OSException.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\ParamChecker.cpp"
 				>
 			</File>
 			<File
@@ -475,6 +491,14 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\UserFeedbackConsole.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\Util.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\VSSException.cpp"
 				>
 			</File>
@@ -494,6 +518,18 @@
 			>
 			<File
 				RelativePath=".\src\ODIN\BufferQueue.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\CmdLineException.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\CmdLineParser.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\CommandLineProcessor.h"
 				>
 			</File>
 			<File
@@ -541,6 +577,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\FileNameUtil.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\ImageStream.h"
 				>
 			</File>
@@ -553,6 +593,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\ODIN\MultiPartitionHandler.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\ODIN\OdinManager.h"
 				>
 			</File>
@@ -562,6 +606,10 @@
 			</File>
 			<File
 				RelativePath=".\src\ODIN\OSException.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\ParamChecker.h"
 				>
 			</File>
 			<File
@@ -586,6 +634,18 @@
 			</File>
 			<File
 				RelativePath=".\src\ODIN\Thread.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\UserFeedback.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\UserFeedbackGUI.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\Util.h"
 				>
 			</File>
 			<File
@@ -614,6 +674,14 @@
 			</File>
 			<File
 				RelativePath=".\testsrc\ODINTest\BitArrayTest.h"
+				>
+			</File>
+			<File
+				RelativePath=".\testsrc\ODINTest\CmdLineTest.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\testsrc\ODINTest\CmdLineTest.h"
 				>
 			</File>
 			<File
@@ -654,6 +722,10 @@
 			</File>
 			<File
 				RelativePath=".\testsrc\ODINTest\FileHeaderTest.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\ODIN\FileNameUtil.cpp"
 				>
 			</File>
 			<File

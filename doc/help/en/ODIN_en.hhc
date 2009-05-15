@@ -1,36 +1,47 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <HTML>
 <HEAD>
-<meta name="GENERATOR" content="Microsoft&reg; HTML Help Workshop 4.1">
+<meta name="GENERATOR" content="Microsoft&reg; HTML Help Workshop 4.1"/>
 <!-- Sitemap 1.0 -->
 </HEAD>
 <BODY>
 <UL>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="ODIN Help Index">
-		<param name="Local" value="main_index.html">
+		<param name="Name" value="ODIN Help Index"/>
+		<param name="Local" value="main_index.html"/>
 		</OBJECT>
+  </LI>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="Operations">
+		<param name="Name" value="Operations"/>
 		</OBJECT>
-	<UL>
+  </LI>
+  <UL>
 		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="Backup a volume">
- 		  <param name="Local" value="main_index.html#backup">
+			<param name="Name" value="Backup a volume"/>
+ 		  <param name="Local" value="main_index.html#backup"/>
 			</OBJECT>
-		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="Restore a volume">
-  		<param name="Local" value="main_index.html#restore">
+    </LI>
+    <LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Restore a volume"/>
+  		<param name="Local" value="main_index.html#restore"/>
 			</OBJECT>
-		<LI> <OBJECT type="text/sitemap">
-			<param name="Name" value="Verify an image">
-  		<param name="Local" value="main_index.html#verify">
+    </LI>
+    <LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Verify an image"/>
+  		<param name="Local" value="main_index.html#verify"/>
 			</OBJECT>
-	</UL>
-	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="Options">
-		<param name="Local" value="main_index.html#options">
+    </LI>
+  </UL>
+  <LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Options"/>
+      <param name="Local" value="main_index.html#options"/>
 		</OBJECT>
+  </LI>
+  <LI> <OBJECT type="text/sitemap">
+      <param name="Name" value="Command Line Interface"/>
+      <param name="Local" value="main_index.html#usage"/>
+	   </OBJECT>
+  </LI>
 </UL>
 </BODY>
 </HTML>

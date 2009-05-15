@@ -42,6 +42,8 @@
 #include "Config.h"
 #include "DriveList.h"
 #include "SplitManagerCallback.h"
+#include "ParamChecker.h"
+#include "UserFeedbackGUI.h"
 
 using namespace std;
 
@@ -54,7 +56,6 @@ public:
   }
   virtual void GetFileName(unsigned fileNo, std::wstring& fileName);
   virtual size_t AskUserForMissingFile(LPCWSTR missingFileName, unsigned fileNo, std::wstring& newName);
-  void RemoveTrailingNumberFromFileName(wstring& fileName); 
 
   void SetBaseName(LPCWSTR baseName)
   {
@@ -67,6 +68,7 @@ private:
 };
 
 class CODINDlg : public CDialogImpl<CODINDlg>
+  , IWaitCallback
 		/*, public CDialogResize<CODINDlg>, public CUpdateUI<CODINDlg>, public CMessageFilter, public CIdleHandler,*/ 
 {
 public:
@@ -75,9 +77,9 @@ public:
 
 private:
   COdinManager fOdinManager;
-	std::list<std::wstring> fFiles;
-	std::list<std::wstring> fDriveNames;
-	TOperationMode fMode;
+  std::list<std::wstring> fFiles;
+  std::list<std::wstring> fDriveNames;
+  TOperationMode fMode;
   CListViewCtrl  fVolumeList;
   WTL::CString fVolumeInfoTemplate;
   CMultiPaneStatusBarCtrl fStatusBar;
@@ -90,10 +92,14 @@ private:
   UINT_PTR fTimer;
   CODINSplitManagerCallback fSplitCB;
   DWORD fCrc32FromFileHeader; // checksum contained in file header of image file 
-  bool fVerifyRun; // a check run to verify the result was started
+  bool fVerifyRun;   // current operation is a run to verify integrity of a file
+  bool fBackupRun;   // current operation is a run to for backup
+  bool fRestoreRun;   // current operation is a run to for restore
   std::wstring fComment; // a comment stored when backing up a file
   bool fWasCancelled;
   static const UINT cTimerId = 111;
+  CUserFeedbackGUI fFeedback;
+  CParamChecker fChecker;
 
   DECLARE_SECTION()
   DECLARE_ENTRY(int, fWndPosX) // x position of dialog window
@@ -104,42 +110,23 @@ private:
   DECLARE_ENTRY(int, fColumn1Width)   // width og column 1 in volume list control
   DECLARE_ENTRY(int, fColumn2Width)   // width og column 2 in volume list control
   DECLARE_ENTRY(int, fColumn3Width)   // width og column 3 in volume list control
+  DECLARE_ENTRY(int, fColumn4Width)   // width og column 4 in volume list control
   DECLARE_ENTRY(std::wstring, fLastImageFile) // path to last image file that was used
 
   void Init();
-	void InitControls();
+  void InitControls();
   void RefreshDriveList();
   void FillDriveList();
   void BrowseFiles(WORD wID);
   void BrowseFilesWithFileOpenDialog();
-  void MakeByteLabel(unsigned __int64 byteCount, LPWSTR buffer, size_t bufsize);
   void GetPartitionFileSystemString(int partType, WTL::CString& fsString);
-  void GetDriveTypeString(TDeviceType driveType, WTL::CString& driveTypeString);
   int GetImageIndexAndUpdateImageList (LPCWSTR drive);
 
-  void WaitUntilDone();
   void DeleteProcessingInfo(bool wasCancelled);
   bool CheckThreadsForErrors();
   void UpdateStatus(bool bInit);
   void ResetProgressControls();
-  __int64 GetFileSizeByName(LPCWSTR fileName);
-  void GetDirFromFileName(const std::wstring& fileName, std::wstring& dir);
-  void GetDriveFromFileName(const std::wstring& fileName, std::wstring& drive);
-  void GetFreeBytesOfDisk(LPCWSTR dir, unsigned __int64* freeBytesAvailable, unsigned __int64* totalNumberOfBytes);
   void GetNoFilesAndFileSize(LPCWSTR fileName, unsigned& fileCount,  unsigned __int64& fileSize, bool& isEntireDriveImageFile);
-  int CheckConditionsForSavePartition(const std::wstring& fileName, int index);
-  int CheckConditionsForRestorePartition(const std::wstring& fileName, int index, unsigned& noFiles, 
-    unsigned __int64& totalSize);
-  int CheckConditionsForVerifyPartition(const std::wstring& fileName, int& volType, unsigned __int64* partitionSizeToSave=NULL);
-  int CheckConditionsForVerifyMBRFile(const std::wstring& fileName);
-  void GenerateFileNameForEntireDiskBackup(std::wstring &volumeFileName /*out*/, LPCWSTR imageFileNamePattern, const std::wstring& partitionDeviceName);
-  void GenerateFileNameForMBRBackupFile(wstring &volumeFileName);
-  void GenerateDeviceNameForVolume(wstring& volumeFileName, unsigned diskNo, unsigned volumeNo);
-  bool TestIsHardDiskImage(const wchar_t* fileName);
-  bool CheckForExistingConflictingFilesSimple(LPCWSTR fileName);
-  bool CheckForExistingConflictingFilesEntireDisk(LPCWSTR volumeFileName, LPCWSTR fileName);
-  void BackupPartitionOrDisk(int index, LPCWSTR fileName);
-  void RestorePartitionOrDisk(int index, LPCWSTR fileName);
   void ReadWindowText(CWindow& wnd, std::wstring& str) {
     int count;
     WTL::CString s;
@@ -147,11 +134,6 @@ private:
 		wnd.GetWindowText(s.GetBuffer(count), count);
     str = s;
   }
-  bool CheckUniqueFileName(LPCWSTR path, LPCWSTR filePattern, bool useConfirmMessage);
-  void GetSplitFilePattern(LPCWSTR path, wstring& filePattern);
-  void GetEntireDiskFilePattern(LPCWSTR path, wstring& filePattern);
-  bool IsFileReadable(LPCWSTR fileName);
-  bool IsFileWritable(LPCWSTR fileName);
   void UpdateFileInfoBox();
   void UpdateFileInfoBoxAndResetProgressControls();
   void ReadImageFileInformation();
@@ -161,6 +143,13 @@ private:
   void DisableControlsWhileProcessing();
   void EnableControlsAfterProcessingComplete();
   void CleanupPartiallyWrittenFiles();
+  void ResetRunInformation();
+  virtual void OnThreadTerminated();
+  virtual void OnFinished();
+  virtual void OnAbort();
+  virtual void OnPartitionChange(int i, int n);
+  virtual void OnPrepareSnapshotBegin();
+  virtual void OnPrepareSnapshotReady();
 public:
 
 	CODINDlg();
@@ -179,15 +168,15 @@ public:
 
 public:
  	BEGIN_MSG_MAP(CODINDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
-		MESSAGE_HANDLER(WM_DEVICECHANGE, OnDeviceChanged)
+	MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
+	MESSAGE_HANDLER(WM_DEVICECHANGE, OnDeviceChanged)
     MESSAGE_HANDLER(WM_TIMER, OnTimer)
-		COMMAND_ID_HANDLER(IDOK, OnOK)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
+	COMMAND_ID_HANDLER(IDOK, OnOK)
+	COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
     COMMAND_HANDLER(IDC_RADIO_BACKUP, BN_CLICKED, OnBnClickedRadioBackup)
     COMMAND_HANDLER(IDC_RADIO_RESTORE, BN_CLICKED, OnBnClickedRadioRestore)
     COMMAND_HANDLER(IDC_COMBO_FILES, CBN_SELCHANGE, OnCbnSelchangeComboFiles)
-		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
+	COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
     NOTIFY_HANDLER(IDC_LIST_VOLUMES, LVN_ITEMCHANGED, OnLvnItemchangedListVolumes)
     // CHAIN_MSG_MAP(CDialogResize<CODINDlg>)
     MESSAGE_HANDLER(WM_DESTROY, OnDestroy)

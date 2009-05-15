@@ -93,12 +93,13 @@ private:
   void CopyTestFilesMultiple(unsigned driveCount, const wchar_t** drives);
   void FormatTestDriveMultiple(unsigned driveCount, const wchar_t** drives, TFileSystem* fileSystems, LPCWSTR volumeLabel);
   void DeleteSomeFilesMultiple(unsigned driveCount, const wchar_t** drives);
-  void DeleteAllFilesMultiple(unsigned driveCount, const wchar_t** drives);
+  void DeleteAllFilesMultiple(unsigned driveCount, const wchar_t** drives, bool erase);
   bool CalcCrc32Multiple(unsigned driveCount, const wchar_t** drives, std::vector<DWORD>& crc);
 
   void WaitUntilDone();
   void CreateFullPath(const std::wstring& fileName, std::wstring& fullPathName);
   bool CopyFile(LPCWSTR srcPath, LPCWSTR destPath);
+  bool CopyEmptyFile(LPCWSTR destPath);
   unsigned  GetDrivesOfHarddisk(const std::wstring& harddiskDevice, unsigned& driveCount, const wchar_t**& drives, TFileSystem*& fileSystems);
   void ReleaseDrivesOfHarddisk(unsigned& driveCount, const wchar_t**& drives, TFileSystem*& fileSystems);
   TFileSystem GetPartitionFileSystem(int partType);
