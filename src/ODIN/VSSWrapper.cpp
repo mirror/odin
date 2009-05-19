@@ -610,17 +610,20 @@ void CVssWrapper::PrepareSnapshot(const wchar_t** volumeNames, int volumeCount)
         fSnapshotDeviceNames = new wstring[volumeCount];
         fSnapshotCount = volumeCount;
         for (int i=0; i < volumeCount; i++) {
-          BOOL bWorked = ::GetVolumePathName(volumeNames[i], wszVolumePathName, MAX_PATH); 
+          if (volumeNames[i] != NULL ) {
+            // mounted volume
+            BOOL bWorked = ::GetVolumePathName(volumeNames[i], wszVolumePathName, MAX_PATH); 
 
-          if (!bWorked) {
-          }
-
-          if (runsOnWinXP) {
-            CHECK_HRESULT(fBackupComponentsXP->AddToSnapshotSet(wszVolumePathName, GUID_NULL, &snapshotId), L"AddToSnapshotSet"); 
+            if (runsOnWinXP) {
+              CHECK_HRESULT(fBackupComponentsXP->AddToSnapshotSet(wszVolumePathName, GUID_NULL, &snapshotId), L"AddToSnapshotSet"); 
+            } else {
+              CHECK_HRESULT(fBackupComponents->AddToSnapshotSet(wszVolumePathName, GUID_NULL, &snapshotId), L"AddToSnapshotSet");
+            }
+            fSnapshotIds[i] = snapshotId;  
           } else {
-            CHECK_HRESULT(fBackupComponents->AddToSnapshotSet(wszVolumePathName, GUID_NULL, &snapshotId), L"AddToSnapshotSet");
+            // unmounted volume
+            fSnapshotIds[i] = GUID_NULL;
           }
-          fSnapshotIds[i] = snapshotId;             
         }
 
         for (unsigned int iWriter = 0; iWriter < fWriters.size(); ++iWriter)
@@ -712,12 +715,16 @@ void CVssWrapper::PrepareSnapshot(const wchar_t** volumeNames, int volumeCount)
         }
 
         for (int i=0; i < volumeCount; i++) {
-          if (runsOnWinXP) {
-            CHECK_HRESULT(fBackupComponentsXP->GetSnapshotProperties(fSnapshotIds[i], &snapshotProperties), L"GetSnapshotProperties");
+          if (fSnapshotIds[i] == GUID_NULL) {
+            fSnapshotDeviceNames[i].clear();
           } else {
-            CHECK_HRESULT(fBackupComponents->GetSnapshotProperties(fSnapshotIds[i], &snapshotProperties), L"GetSnapshotProperties");
-          }
-          fSnapshotDeviceNames[i] = snapshotProperties.m_pwszSnapshotDeviceObject;
+            if (runsOnWinXP) {
+              CHECK_HRESULT(fBackupComponentsXP->GetSnapshotProperties(fSnapshotIds[i], &snapshotProperties), L"GetSnapshotProperties");
+            } else {
+              CHECK_HRESULT(fBackupComponents->GetSnapshotProperties(fSnapshotIds[i], &snapshotProperties), L"GetSnapshotProperties");
+            }
+            fSnapshotDeviceNames[i] = snapshotProperties.m_pwszSnapshotDeviceObject;
+            }
         }
 
     }
@@ -731,7 +738,8 @@ void CVssWrapper::PrepareSnapshot(const wchar_t** volumeNames, int volumeCount)
 
 const wchar_t* CVssWrapper::GetSnapshotDeviceName(int driveIndex) 
 {
-  return fSnapshotDeviceNames[driveIndex].c_str() + 14 ; // remove prefix \\?\GLOBALROOT
+  return fSnapshotDeviceNames[driveIndex].empty() ? NULL : fSnapshotDeviceNames[driveIndex].c_str() + 14;
+     // remove prefix \\?\GLOBALROOT
 }
 
 

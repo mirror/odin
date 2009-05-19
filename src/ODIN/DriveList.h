@@ -117,6 +117,10 @@ class CDriveInfo {
      return fIsDisk;
    }
 
+   bool IsMounted() const {
+     return fIsMounted;
+   }
+
    void SetParent(CDriveInfo* pParent) {
      fParent = pParent;
    }
@@ -141,6 +145,7 @@ class CDriveInfo {
     bool fKnownType;
     int fContainedVolumes; // number of volumes contained in a physical disk
     bool fIsDisk;           // true: is a complete hard disk, false: is a partition
+    bool fIsMounted;       // true if volume is mounted false if not mounted
     CDriveInfo* fParent;   // parent object e.g. hard disk of a partition
 };
 

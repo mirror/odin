@@ -1,4 +1,21 @@
-Version 0.30 (2009-05-15)
+=========================
+Changes:
+
+Bug fixes:
+ - Disabling of GUI controls is not correct if entire disk is backuped/
+   restored with used blocks only option and contains more than one volume
+ - Progress bar is not updated after first partition if entire disk is 
+   backuped/restored with used blocks only option and contains more than 
+   one volume
+ - snapshots are not correctly created if entire disk is backuped
+   with used blocks only option and contains more than one volume
+ - Problems occur if an entire disk is restored and the disk partition
+   scheme changes (the just created volumes can not be found)
+ - file locked after exception on backup/restore
+ - erroneous warning backup onto itself if multiple disks are attached
+ - exit after completion still gives warning to cancel operation
+ - change code to check if a volume is mounted (use IOCTL and not drive letter)
+   
 =========================
 Changes:
  - Introduce command line interface and odinc.exe as command line application

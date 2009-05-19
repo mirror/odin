@@ -107,7 +107,6 @@ bool CParamChecker::CheckUniqueFileName(LPCWSTR path, LPCWSTR filePattern, bool 
           msg << _T("...") << endl;
         msg << (LPCWSTR)postfix << endl;
         msgRes = fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TOkCancel, msg.str().c_str());
-        // msgRes = AtlMessageBox(m_hWnd, msg.str().c_str(), IDS_WARNING, MB_ICONEXCLAMATION | MB_OKCANCEL);
       } else {
         msgRes = IUserFeedback::TOk;
       }
@@ -121,7 +120,6 @@ bool CParamChecker::CheckUniqueFileName(LPCWSTR path, LPCWSTR filePattern, bool 
           if (!success) {
             WTL::CString msg;
             msg.Format(IDS_CANNOTDELETEFILE, file.c_str());
-			//AtlMessageBox(m_hWnd, (LPCWSTR)msg, IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
             msgRes = fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TOkCancel, (LPCWSTR)msg);
 			break;
 		  }
@@ -143,7 +141,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
   WTL::CString msgStr;
 
   if (index < 0) {
-    // AtlMessageBox(m_hWnd, IDS_VOLUME_NOSEL, IDS_WARNING, MB_OK);
     msgStr.LoadString(IDS_VOLUME_NOSEL);
     fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TConfirm, msgStr);
     return IUserFeedback::TCancel;
@@ -152,7 +149,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
   // check if target file already exists and warn that it will be overwritten
   if (CFileNameUtil::IsFileReadable(fileName.c_str())) {
     msgStr.Format(IDS_FILE_EXISTS, fileName.c_str());
-    //res = AtlMessageBox(m_hWnd, (LPCWSTR)msgStr, IDS_WARNING, MB_OKCANCEL);
     res = fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TOkCancel, (LPCWSTR)msgStr);
     if (res != IUserFeedback::TOk)
       return res;
@@ -161,7 +157,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
   // check if target file can be written to
   if (!CFileNameUtil::IsFileWritable(fileName.c_str())) {
     msgStr.Format(IDS_CANTWRITEFILE, fileName.c_str());
-    //AtlMessageBox(m_hWnd, (LPCWSTR)msgStr, IDS_ERROR, MB_OK);
     fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
     return IUserFeedback::TCancel;
   }
@@ -181,7 +176,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
 
 
   if (freeBytesAvailable < bytesToSave) {
-    //res = AtlMessageBox(m_hWnd, IDS_NOTENOUGHSPACE, IDS_ERROR, MB_ICONEXCLAMATION | MB_YESNO);
     msgStr.LoadStringW(IDS_NOTENOUGHSPACE);
     res = fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TYesNo, (LPCWSTR)msgStr);
 
@@ -201,7 +195,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
                GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT32_XINT13 ||
                GetDriveInfo(targetIndex)->GetPartitionType() == PARTITION_FAT_16);
   if (isFAT && bytesToSave > (2i64<<32)-1 && fOdinManager.GetSplitSize() == 0) {
-    //res = AtlMessageBox(m_hWnd, IDS_4GBLIMITEXCEEDED, IDS_WARNING, MB_ICONEXCLAMATION | MB_YESNO);
     msgStr.LoadStringW(IDS_4GBLIMITEXCEEDED);
     res = fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TYesNo, (LPCWSTR)msgStr);
     if (res != IUserFeedback::TYes)
@@ -227,10 +220,8 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
   }
   
   for (int i=0; i<partitionsToSave; i++) {
-    // warning: do not use same drive for source and destination
     wstring sourceDrive = pContainedVolumes[i]->GetMountPoint();
-    if (sourceDrive.empty() ) {
-      //res = AtlMessageBox(m_hWnd, IDS_UNMOUNTED_VOLUME, IDS_WARNING, MB_ICONEXCLAMATION | MB_OKCANCEL);
+    if (!pContainedVolumes[i]->IsMounted() ) {
       msgStr.LoadStringW(IDS_UNMOUNTED_VOLUME);
       res = fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TOkCancel, (LPCWSTR)msgStr);
       if (res != IUserFeedback::TOk) {
@@ -238,7 +229,7 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
         return res;
       }
     } else if (sourceDrive.compare(targetDrive) == 0) {
-      //res = AtlMessageBox(m_hWnd, IDS_NOTSAMEDRIVE, IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
+      // warning: do not use same drive for source and destination
       msgStr.LoadStringW(IDS_NOTSAMEDRIVE);
       res = fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TOkCancel, (LPCWSTR)msgStr);
       if (res != IUserFeedback::TOk) {
@@ -248,13 +239,12 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
     }
 
     // warning: do not backup windows partition
-    wstring sysDir;
+    wstring sysDir, sysDrive;
     wchar_t systemDir[MAX_PATH];
     int count = GetSystemDirectory(systemDir, MAX_PATH);
     sysDir = systemDir;
-    CFileNameUtil::GetDriveFromFileName(sysDir, targetDrive);
-    if (sourceDrive.compare(targetDrive) == 0 && !fOdinManager.GetTakeSnapshotOption()) {
-      //res = AtlMessageBox(m_hWnd, IDS_NOWINDIRBACKUP, IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
+    CFileNameUtil::GetDriveFromFileName(sysDir, sysDrive);
+    if (sourceDrive.compare(sysDrive) == 0 && !fOdinManager.GetTakeSnapshotOption()) {
       msgStr.LoadStringW(IDS_NOWINDIRBACKUP);
       res = fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TOkCancel, (LPCWSTR)msgStr);
     }
@@ -269,7 +259,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
     WTL::CString msgStr;
     MakeByteLabel( fOdinManager.GetReadBlockSize(), buffer, BUFSIZE);
     msgStr.Format(IDS_SPLITSIZETOOSMALL, buffer);
-    //res = AtlMessageBox(m_hWnd, (LPCWSTR)msgStr, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
     res = fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
     res = IUserFeedback::TCancel;
   }
@@ -311,7 +300,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForVerifyPartition(
   {
     msgStr.Format(IDS_CANTREADFILE, fileName.c_str());
     fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
-    //AtlMessageBox(m_hWnd, (LPCWSTR)msgStr, IDS_ERROR, MB_OK);
     return IUserFeedback::TCancel;
   }
 
@@ -319,7 +307,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForVerifyPartition(
   fileStream.ReadImageFileHeader(false);
   if (!fileStream.GetImageFileHeader().IsValidFileHeader())
   {
-    //AtlMessageBox(m_hWnd, IDS_WRONGFILEFORMAT, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
     msgStr.LoadString(IDS_WRONGFILEFORMAT);
     fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
     res = IUserFeedback::TCancel;
@@ -334,7 +321,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForVerifyPartition(
   if (totalSize == 0 || crc32FromFileHeader == 0) {
     // The image is corrupt and was not written completely (this information is stored as last step)
     msgStr.Format(IDS_INCOMPLETE_IMAGE, openName.c_str());
-    //AtlMessageBox(m_hWnd, (LPCWSTR)msgStr, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
     fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
     res = IUserFeedback::TCancel;
   }
@@ -354,7 +340,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
   noFiles = 0;
   totalSize = 0;
   if (index < 0) {
-    //AtlMessageBox(m_hWnd, IDS_VOLUME_NOSEL, IDS_ERROR, MB_OK);
     msgStr.LoadStringW(IDS_VOLUME_NOSEL);
     fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
     return IUserFeedback::TCancel;
@@ -370,7 +355,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
       return res;
     // check that target is a harddisk too 
     if (!pDriveInfo->IsCompleteHardDisk()) {
-      //AtlMessageBox(m_hWnd, IDS_WRONGPARTITIONTYPE, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
       msgStr.LoadStringW(IDS_WRONGPARTITIONTYPE);
       fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
       return IUserFeedback::TCancel;
@@ -383,12 +367,10 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
     partInfoMgr.ReadPartitionInfoFromFile(mbrFileName.c_str());
 
     if (partInfoMgr.GetDiskSize() > (unsigned __int64) pDriveInfo->GetBytes()) {
-      //AtlMessageBox(m_hWnd, IDS_IMAGETOOBIG, IDS_WARNING, MB_ICONEXCLAMATION | MB_OK);
       msgStr.LoadStringW(IDS_IMAGETOOBIG);
       fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
       res = IUserFeedback::TCancel;
     } else if (partInfoMgr.GetDiskSize() < (unsigned __int64) pDriveInfo->GetBytes()) {
-      //res = AtlMessageBox(m_hWnd, IDS_IMAGETOOSMALL, IDS_WARNING, MB_ICONEXCLAMATION | MB_YESNO);
       msgStr.LoadStringW(IDS_IMAGETOOSMALL);
       res = fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TYesNo, (LPCWSTR)msgStr);
     }
@@ -406,7 +388,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
   // prevent restoring a hard disk to a partition or a partition to a hard disk
   if (( pDriveInfo->IsCompleteHardDisk() && volType != CImageFileHeader::volumeHardDisk) ||
       (!pDriveInfo->IsCompleteHardDisk() && volType != CImageFileHeader::volumePartition)) {
-    //AtlMessageBox(m_hWnd, IDS_WRONGPARTITIONTYPE, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
     msgStr.LoadStringW(IDS_WRONGPARTITIONTYPE);
     fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
     res = IUserFeedback::TCancel;
@@ -416,13 +397,11 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
   if (!isMBRFile) {  
       targetPartitionSize =  pDriveInfo->GetBytes();
       if (targetPartitionSize < partitionSizeToSave) {
-        //AtlMessageBox(m_hWnd, IDS_IMAGETOOBIG, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
         msgStr.LoadStringW(IDS_IMAGETOOBIG);
         fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
         res = IUserFeedback::TCancel;
       }
       else if (targetPartitionSize > partitionSizeToSave) {
-        //res = AtlMessageBox(m_hWnd, IDS_IMAGETOOSMALL, IDS_WARNING, MB_ICONEXCLAMATION | MB_YESNO);
         msgStr.LoadStringW(IDS_IMAGETOOSMALL);
         res = fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TYesNo, (LPCWSTR)msgStr);
       }
@@ -437,7 +416,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
       CFileNameUtil::GetDriveFromFileName(sysDir, sysDrive);
       wstring targetDrive =  pDriveInfo->GetMountPoint();
       if (sysDrive.compare(targetDrive) == 0 && !fOdinManager.GetTakeSnapshotOption()) {
-        //res = AtlMessageBox(m_hWnd, IDS_NORESTORETOWINDOWS, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
         msgStr.LoadStringW(IDS_NORESTORETOWINDOWS);
         fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
         res = IUserFeedback::TCancel;
@@ -447,7 +425,6 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
   if (res == IUserFeedback::TOk) {
     WTL::CString msg;
     msg.Format(IDS_ERASE_DRIVE, fOdinManager.GetDriveInfo(index)->GetMountPoint().c_str());
-    //res = AtlMessageBox(m_hWnd, (LPCWSTR)msg, IDS_WARNING, MB_ICONEXCLAMATION | MB_OKCANCEL);
     res = fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TOkCancel, (LPCWSTR)msg);
     if (res != IUserFeedback::TOk)
       return res;
@@ -469,7 +446,6 @@ bool CParamChecker::CheckForExistingConflictingFilesSimple(LPCWSTR fileName, ISp
     if (!ok) {
       WTL::CString msg;
       msg.Format(IDS_CANNOTDELETEFILE, fileName);
-      // AtlMessageBox(m_hWnd, (LPCWSTR)msg, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
       fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msg);
     }
   }
@@ -485,7 +461,6 @@ bool CParamChecker::CheckForExistingConflictingFilesEntireDisk(LPCWSTR volumeFil
   if (CFileNameUtil::IsFileReadable(mbrFileName.c_str())) {
     WTL::CString msgStr;
     msgStr.Format(IDS_FILE_EXISTS, mbrFileName.c_str());
-    // int res = AtlMessageBox(m_hWnd, (LPCWSTR)msgStr, IDS_WARNING, MB_OKCANCEL);
     IUserFeedback::TFeedbackResult res = fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TOkCancel, (LPCWSTR)msgStr);
 
     if (res != IUserFeedback::TOk)
@@ -494,7 +469,6 @@ bool CParamChecker::CheckForExistingConflictingFilesEntireDisk(LPCWSTR volumeFil
     if (!ok) {
       WTL::CString msg;
       msg.Format(IDS_CANNOTDELETEFILE, mbrFileName.c_str());
-      // AtlMessageBox(m_hWnd, (LPCWSTR)msg, IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
       fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msg);
     }
   }
