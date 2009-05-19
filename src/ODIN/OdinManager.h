@@ -132,8 +132,19 @@ public:
     fMultiVolumeMode = mode;
   }
 
+  void SetMultiVolumeIndex(unsigned index) {
+    fMultiVolumeIndex = index;
+  }
+
   bool GetMultiVolumeMode() const {
     return fMultiVolumeMode;
+  }
+
+  bool WasCancelled() const {
+    return fWasCancelled;
+  }
+  void Uncancel() {
+    fWasCancelled = false;
   }
 
   void MakeSnapshot(int driveIndex, IWaitCallback* wcb);
@@ -181,6 +192,8 @@ private:
     // This can be used to backup multiple volumes (e.g. all that are part of a physical
     // disk) within one snaphot. This option is only meaningful if fTakeVSSSnapshot is set
     // to true. Default is false.
+  unsigned fMultiVolumeIndex;
+    // current index to backup in multi volume mode
   bool fWasCancelled;
     // indicates if true that an operation was cancelled by a user
   

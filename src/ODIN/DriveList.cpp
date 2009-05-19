@@ -107,6 +107,7 @@ CDriveInfo::CDriveInfo(
   fContainedVolumes = 0;
   fIsDisk = isDisk;
   fParent = NULL;
+  fIsMounted = false;
 }
 
 
@@ -172,6 +173,7 @@ if (!bSuccess)
         fBytes = 0; fSectors = 0; fBytesPerSector = 0; fSectorsPerTrack = 0; fDriveType = driveUnknown;
         fKnownType = fReadable = false;
       }
+      fIsMounted = DeviceIoControl(hDrive, FSCTL_IS_VOLUME_MOUNTED, NULL, 0, NULL, 0, &nCount, NULL) != FALSE;  
 
       // get volumen name:
       if (fMountPoint.length() > 0) {

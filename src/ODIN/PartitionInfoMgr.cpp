@@ -182,6 +182,10 @@ void CPartitionInfoMgr::WritePartitionInfoToDisk(const wchar_t* driveName)
   res = DeviceIoControl(hDisk, IOCTL_DISK_SET_DRIVE_LAYOUT_EX, fBuffer, bufferSize, NULL, 0, &dummy, NULL);
   CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_SET_DRIVE_LAYOUT_EX");
 
+  // notify windows that the partition scheme has changed and that the drives may have changed
+  res = DeviceIoControl(hDisk, IOCTL_DISK_UPDATE_PROPERTIES, NULL, 0, NULL, 0, &dummy, NULL);
+  CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_UPDATE_PROPERTIES");
+
   diskStream.Close();
 }
 

@@ -75,14 +75,16 @@ void CMultiPartitionHandler::BackupPartitionOrDisk(int index, LPCWSTR fileName, 
       partInfoMgr.ReadPartitionInfoFromDisk(pDriveInfo->GetDeviceName().c_str());
       partInfoMgr.WritePartitionInfoToFile(mbrFileName.c_str());
 
+      odinMgr.Uncancel();
       if (odinMgr.GetTakeSnapshotOption())  {
         odinMgr.SetMultiVolumeMode(true);
         odinMgr.MakeSnapshot(index, wcb);
       }
 
-      for (int i=0; i<subPartitions; i++) {
+      for (int i=0; i<subPartitions && !odinMgr.WasCancelled(); i++) {
         CFileNameUtil::GenerateFileNameForEntireDiskBackup(volumeFileName, fileName, pContainedVolumes[i]->GetDeviceName());
         wcb->OnPartitionChange(i, subPartitions);
+        odinMgr.SetMultiVolumeIndex(i);
         odinMgr.SavePartition(odinMgr.GetDriveList()->GetIndexOfDeviceName(pContainedVolumes[i]->GetDeviceName()),
           volumeFileName.c_str(), odinMgr.GetSplitSize() ? cb : NULL, wcb);
         ATLTRACE(L"Found sub-partition: %s\n", pContainedVolumes[i]->GetDisplayName().c_str());
@@ -90,10 +92,12 @@ void CMultiPartitionHandler::BackupPartitionOrDisk(int index, LPCWSTR fileName, 
       }
 
       delete pContainedVolumes;
+      odinMgr.SetMultiVolumeIndex(0);
       if (odinMgr.GetTakeSnapshotOption()) {
         odinMgr.ReleaseSnapshot(false);
         odinMgr.SetMultiVolumeMode(false);
       }
+      odinMgr.Uncancel();
     }
   } else { // not a complete hard disk, but only a paritition or complete disk but with all blocks
     ok = checker.CheckForExistingConflictingFilesSimple(fileName, *cb);
@@ -147,10 +151,11 @@ void CMultiPartitionHandler::RestorePartitionOrDisk(int index, LPCWSTR fileName,
     index = odinMgr.GetDriveList()->GetIndexOfDeviceName(targetDiskDeviceName);
     pDriveInfo = odinMgr.GetDriveList()->GetItem(index);
 
+    odinMgr.Uncancel();
     unsigned subPartitions = partInfoMgr.GetPartitionCount();
     unsigned diskNo = pDriveInfo->GetDiskNumber();
     wstring volumeDeviceName, partitionFileName;
-    for (unsigned i=0; i<subPartitions; i++) {
+    for (unsigned i=0; i<subPartitions && !odinMgr.WasCancelled(); i++) {
       CFileNameUtil::GenerateDeviceNameForVolume(volumeDeviceName, diskNo, i+1);
       CFileNameUtil::GenerateFileNameForEntireDiskBackup(volumeFileName, fileName, volumeDeviceName);
       ATLTRACE(L"Found sub-partition: %s\n", volumeDeviceName.c_str());
@@ -167,6 +172,8 @@ void CMultiPartitionHandler::RestorePartitionOrDisk(int index, LPCWSTR fileName,
       odinMgr.RestorePartition(baseName.c_str(), index, fileCount, fileSize, cb, wcb);
       odinMgr.WaitToCompleteOperation(wcb);
   }
+  odinMgr.Uncancel();
+
 }
 
 bool CMultiPartitionHandler::VerifyPartitionOrDisk(LPCWSTR fileName, COdinManager &odinMgr, 
@@ -198,7 +205,8 @@ bool CMultiPartitionHandler::VerifyPartitionOrDisk(LPCWSTR fileName, COdinManage
       subPartitions = 1;
     }
 
-    for (unsigned i=0; i<subPartitions; i++) {
+    odinMgr.Uncancel();
+    for (unsigned i=0; i<subPartitions && !odinMgr.WasCancelled(); i++) {
       if (isHardDisk) {
         wstring volumeDeviceName;
         CFileNameUtil::GenerateDeviceNameForVolume(volumeDeviceName, 99 /* dummy value */, i+1);
@@ -213,7 +221,8 @@ bool CMultiPartitionHandler::VerifyPartitionOrDisk(LPCWSTR fileName, COdinManage
         odinMgr.VerifyPartition(volumeFileName.c_str(), -1, noFiles, totalSize, cb, wcb);
         odinMgr.WaitToCompleteOperation(wcb);
       }
-    } 
+    }
+    odinMgr.Uncancel();
     return true;
 }
 

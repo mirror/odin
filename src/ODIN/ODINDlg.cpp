@@ -324,58 +324,6 @@ void CODINDlg::BrowseFilesWithFileOpenDialog()
   }
 }
 
-/*
-void CODINDlg::WaitUntilDone()
-{
-  // wait until threads are completed without blocking the user interface
-  unsigned threadCount = fOdinManager.GetThreadCount();
-  HANDLE* threadHandleArray = new HANDLE[threadCount];
-  bool ok = fOdinManager.GetThreadHandles(threadHandleArray, threadCount);
-  if (!ok)
-    return;
-  ATLTRACE("Wait until done entered.\n");
-
-  while (TRUE) {
-    DWORD result = MsgWaitForMultipleObjects(threadCount, threadHandleArray, FALSE, INFINITE, QS_ALLEVENTS);
-    if (result >= WAIT_OBJECT_0 && result < (DWORD)threadCount) {
-      ATLTRACE("event arrived: %d, thread id: %x\n", result, threadHandleArray[result]);
-      if (--threadCount == 0)  {
-        fBytesProcessed = fOdinManager.GetBytesProcessed();
-        UpdateStatus(false);
-        ATLTRACE(" All worker threads are terminated now\n");
-        //ATLTRACE(" Total Bytes written: %lu\n", m_allThreads[1]->GetBytesWritten());
-        //ATLTRACE(" Total Bytes read: %lu\n", m_allThreads[0]->GetBytesRead());
-        bool wasVerifyRun = fVerifyRun; // will be deleted in DeleteProcessingInfo()!
-        DeleteProcessingInfo(fWasCancelled); // work is finished
-        if (wasVerifyRun) {
-          CheckVerifyResult();
-          fVerifyRun = false;
-        }
-        break;
-      }
-      // setup new array with the remaining threads:
-      for (unsigned i=result; i<threadCount; i++)
-        threadHandleArray[i] = threadHandleArray[i+1];
-    }
-    else if (result  == WAIT_OBJECT_0 + threadCount)
-    {
-      // ATLTRACE("windows msg arrived\n");
-      // process windows messages
-      MSG msg ;
-      while(::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-        ::DispatchMessage(&msg) ;
-    }
-    else if ( WAIT_FAILED) {
-      ATLTRACE("MsgWaitForMultipleObjects failed, last error is: %d\n", GetLastError());
-      break;
-    }
-    else
-      ATLTRACE("unusual return code from MsgWaitForMultipleObjects: %d\n", result);
-  }
-  delete [] threadHandleArray;
-  ATLTRACE("Wait until done exited.\n");
-}
-*/
 
 void CODINDlg::OnThreadTerminated()
 {
@@ -414,6 +362,7 @@ void CODINDlg::OnPartitionChange(int i, int n)
       statusText.LoadString(IDS_STATUS_BACKUP_PARTITION_PROGRESS);
   }
   fStatusBar.SetWindowTextW(statusText);
+  fTimer = SetTimer(cTimerId, 1000); 
 }
 
 void CODINDlg::OnPrepareSnapshotBegin()
@@ -441,8 +390,6 @@ void CODINDlg::DeleteProcessingInfo(bool wasCancelled)
   if (msg != NULL)
     msgCopy = msg;
 
-//  fOdinManager.Terminate(wasCancelled);
-
   if (msg != NULL)
     	AtlMessageBox(m_hWnd, msgCopy.c_str(), IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
 
@@ -452,10 +399,6 @@ void CODINDlg::DeleteProcessingInfo(bool wasCancelled)
   else
     statusText.LoadString(IDS_STATUS_OPERATION_COMPLETED);
   fStatusBar.SetWindowTextW(statusText);
-
-  if (::IsWindow(m_hWnd)) {   // may be destroyed if user pressed Cancel button
-    EnableControlsAfterProcessingComplete();
-  }
 }
 
 bool CODINDlg::CheckThreadsForErrors()
@@ -897,6 +840,7 @@ LRESULT CODINDlg::OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& b
         DisableControlsWhileProcessing();
         fBackupRun=true;
         CMultiPartitionHandler::BackupPartitionOrDisk(index, fileName.c_str(),fOdinManager, &fSplitCB, this, fFeedback );
+        EnableControlsAfterProcessingComplete();
       } 
 	  } else if (fMode == modeRestore) {
       unsigned noFiles = 0;
@@ -906,6 +850,7 @@ LRESULT CODINDlg::OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& b
         DisableControlsWhileProcessing();
         fRestoreRun=true;
         CMultiPartitionHandler::RestorePartitionOrDisk(index, fileName.c_str(), fOdinManager, &fSplitCB, this);
+        EnableControlsAfterProcessingComplete();
       } 
     } else {
       ATLTRACE("Internal Error neither backup nor restore state");
@@ -915,11 +860,16 @@ LRESULT CODINDlg::OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& b
     wstring msg = e.GetMessage();
     int res = AtlMessageBox(m_hWnd, msg.c_str(), IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
     DeleteProcessingInfo(true);
+    fOdinManager.Terminate();
+    if (::IsWindow(m_hWnd))   // may be destroyed if user pressed Cancel button
+       EnableControlsAfterProcessingComplete();
   }
   catch (...) {
     // We've encountered an exception sometime before we started the operation, so close down everything
     // as gracefully as we can.
     DeleteProcessingInfo(true);
+    if (::IsWindow(m_hWnd))    // may be destroyed if user pressed Cancel button
+       EnableControlsAfterProcessingComplete();
     throw;
   }
 
@@ -934,12 +884,9 @@ LRESULT CODINDlg::OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOO
     if (res == IDYES) {
       fWasCancelled = true;
       fOdinManager.CancelOperation();
-      /*
-      DeleteProcessingInfo(true);
-      ResetProgressControls();
-      if (fMode==modeBackup)
-        CleanupPartiallyWrittenFiles();
-      */
+      if (::IsWindow(m_hWnd))   // may be destroyed if user pressed Cancel button
+        EnableControlsAfterProcessingComplete();
+
     }
   } else {
     DeleteProcessingInfo(true);
@@ -1075,24 +1022,27 @@ LRESULT CODINDlg::OnBnClickedBtVerify(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 
     fTimer = SetTimer(cTimerId, 1000); 
     fVerifyRun = true;
+    statusText.LoadString(IDS_STATUS_VERIFY_PROGRESS);
+    fStatusBar.SetWindowText(statusText);
     bool run = CMultiPartitionHandler::VerifyPartitionOrDisk(fileName.c_str(), fOdinManager, 
                    fCrc32FromFileHeader, &fSplitCB, this, fFeedback);
-    if (run) {
-     statusText.LoadString(IDS_STATUS_VERIFY_PROGRESS);
-     fStatusBar.SetWindowText(statusText);
-    }
-    else
+    if (!run)
       fVerifyRun = false;
+    EnableControlsAfterProcessingComplete();
 
   } catch (Exception& e) {
     wstring msg = e.GetMessage();
     int res = AtlMessageBox(m_hWnd, msg.c_str(), IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
     DeleteProcessingInfo(true);
+    if (::IsWindow(m_hWnd))   // may be destroyed if user pressed Cancel button
+       EnableControlsAfterProcessingComplete();
   }
   catch (...) {
     // We've encountered an exception sometime before we started the operation, so close down everything
     // as gracefully as we can.
     DeleteProcessingInfo(true);
+    if (::IsWindow(m_hWnd))   // may be destroyed if user pressed Cancel button
+       EnableControlsAfterProcessingComplete();
     throw;
   }
   return 0;

@@ -86,6 +86,7 @@ void COdinManager::Init()
   fIsRestoring = false;
   fVSS = NULL;
   fMultiVolumeMode = false;
+  fMultiVolumeIndex = 0;
   if (!CVssWrapper::VSSIsSupported()) {
     fTakeVSSSnapshot = false;
   }
@@ -142,7 +143,10 @@ void COdinManager::Reset()
   fEmptyCompDecompQueue = NULL;
   delete fFilledCompDecompQueue;
   fFilledCompDecompQueue = NULL;
-  if (!fMultiVolumeMode) {
+  if (fMultiVolumeMode) {
+    fIsSaving = false;
+    fIsRestoring = false;
+  } else {
     if (fVSS) {
       delete fVSS;
       fVSS = NULL;
@@ -196,7 +200,7 @@ void COdinManager::MakeSnapshot(int driveIndex, IWaitCallback* wcb) {
           if (pContainedVolumes[i]->GetMountPoint().length() > 0)
             mountPoints[j++] = pContainedVolumes[i]->GetMountPoint().c_str();
           else 
-            --subPartitions;
+            mountPoints[j++] = NULL; // unmounted volume
         }
         delete pContainedVolumes;
     } else {
@@ -228,7 +232,7 @@ void COdinManager::GetDriveNameList(std::list<std::wstring>& driveNames)
 void COdinManager::DoCopy(TOdinOperation operation, LPCWSTR fileName, int driveIndex, unsigned noFiles,
                           unsigned __int64 totalSize, ISplitManagerCallback* cb,  IWaitCallback* wcb)
 {
-	int nBufferCount = 8;
+  int nBufferCount = 8;
   TCompressionFormat decompressionFormat = noCompression;
   bool bSaveAllBlocks = fSaveAllBlocks;
   fVerifyCrc32 = 0;
@@ -258,16 +262,19 @@ void COdinManager::DoCopy(TOdinOperation operation, LPCWSTR fileName, int driveI
         fTargetImage->Open(fileName, IImageStream::forWriting);
       }
       // setup source device
-      std::wstring vssVolume;
-      if (fTakeVSSSnapshot && ! fMultiVolumeMode && !verifyOnly && !pDriveInfo->GetMountPoint().empty()) {
-        wcb->OnPrepareSnapshotBegin();
-        fVSS = new CVssWrapper();
-        LPCWSTR* mountPointPtr = &mountPoint;
-        fVSS->PrepareSnapshot(mountPointPtr, 1);
-        wcb->OnPrepareSnapshotReady();
-        vssVolume = fVSS->GetSnapshotDeviceName(0);
-        if (vssVolume.length())
-            deviceName  = vssVolume.c_str() ;
+      const wchar_t* vssVolume;
+      if (fTakeVSSSnapshot && !verifyOnly && !pDriveInfo->GetMountPoint().empty()) {
+        if (!fMultiVolumeMode) {
+          wcb->OnPrepareSnapshotBegin();
+          fVSS = new CVssWrapper();
+          LPCWSTR* mountPointPtr = &mountPoint;
+          fVSS->PrepareSnapshot(mountPointPtr, 1);
+          wcb->OnPrepareSnapshotReady();
+          fMultiVolumeIndex = 0;
+        }
+        vssVolume = fVSS->GetSnapshotDeviceName(fMultiVolumeIndex);
+          if (vssVolume != NULL && *vssVolume != L'\0') // can be 0 if not mounted
+            deviceName  = vssVolume;
       }
       fSourceImage = new CDiskImageStream();
       fSourceImage->Open(deviceName, IImageStream::forReading);
@@ -340,8 +347,14 @@ void COdinManager::DoCopy(TOdinOperation operation, LPCWSTR fileName, int driveI
       fileStream->SetComment(fComment.c_str());
       fileStream->SetCompressionFormat(GetCompressionMode());
       fileStream->SetVolumeFormat(isHardDisk ? CImageFileHeader::volumeHardDisk : CImageFileHeader::volumePartition);
-      ((CDiskImageStream*)fSourceImage)->SetBytesPerCluster(bytesPerCluster);
-      if (bSaveAllBlocks || isHardDisk || !((CDiskImageStream*)fSourceImage)->IsMounted()) 
+      if (((CDiskImageStream*)fSourceImage)->GetBytesPerCluster() == 0) {
+        // image stream could not detect cluster size so we just take the one from GetDiskFreeEx()
+        ((CDiskImageStream*)fSourceImage)->SetBytesPerCluster(bytesPerCluster);
+      }
+      else
+        bytesPerCluster = ((CDiskImageStream*)fSourceImage)->GetBytesPerCluster();
+
+      if (bSaveAllBlocks || isHardDisk || !((CDiskImageStream*)fSourceImage)->IsMounted() || bytesPerCluster == 0) 
         bSaveAllBlocks = true;
       if (!bSaveAllBlocks) {
         fileStream->WriteImageFileHeaderAndAllocationMap((CDiskImageStream*)fSourceImage);

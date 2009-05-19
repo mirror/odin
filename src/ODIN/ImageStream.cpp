@@ -344,6 +344,7 @@ CDiskImageStream::CDiskImageStream()
   fContainedVolumeCount = 0;
   fSubVolumeLocker = NULL;
   fWasLocked = false;
+  fBytesPerCluster = 0;
 }
 
 CDiskImageStream::~CDiskImageStream()
@@ -404,6 +405,7 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
 { 
   PARTITION_INFORMATION_EX partInfo;
   DISK_GEOMETRY diskGeometry;
+  NTFS_VOLUME_DATA_BUFFER ntfsVolData;
   GET_LENGTH_INFORMATION lengthInfo;
   DWORD dummy, res;
   long ntStatus;
@@ -438,6 +440,7 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
   memset(&partInfo, 0, sizeof(partInfo));
   memset(&diskGeometry, 0, sizeof(diskGeometry));
   memset(&lengthInfo, 0, sizeof(lengthInfo));
+  memset(&ntfsVolData, 0, sizeof(ntfsVolData));
   res = DeviceIoControl(fHandle, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &partInfo, sizeof(partInfo), &dummy, NULL);
   //CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_PARTITION_INFO_EX");
   // on some disks this might fail try PARTITION_INFORMATION then
@@ -452,9 +455,7 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
     CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_DRIVE_GEOMETRY");
     fPartitionType = partInfo.Mbr.PartitionType;
   }
-
-  fIsMounted = DeviceIoControl(fHandle, FSCTL_IS_VOLUME_MOUNTED, NULL, 0, NULL, 0, &dummy, NULL) != FALSE;
-    
+  fIsMounted = DeviceIoControl(fHandle, FSCTL_IS_VOLUME_MOUNTED, NULL, 0, NULL, 0, &dummy, NULL) != FALSE;  
   res = DeviceIoControl(fHandle, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &lengthInfo, sizeof(lengthInfo), &dummy, NULL);
   CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_LENGTH_INFO");
   res = DeviceIoControl(fHandle, IOCTL_DISK_GET_DRIVE_GEOMETRY	, NULL, 0, &diskGeometry, sizeof(diskGeometry), &dummy, NULL);
@@ -463,6 +464,12 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
   fBytesPerSector = diskGeometry.BytesPerSector;
   // Note: for NTFS use: FSCTL_GET_NTFS_VOLUME_DATA to get cluster size
   //       for FAT use getDiskFreeSpaceEx (see KB 231497,http://support.microsoft.com/?scid=kb%3Ben-us%3B231497&x=21&y=17)
+  res = DeviceIoControl(fHandle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, 0, &ntfsVolData, sizeof(ntfsVolData), &dummy, NULL);
+  if (res != 0) {
+    // we have an NTFSVolume
+    fBytesPerCluster = ntfsVolData.BytesPerCluster;
+  }
+  
   if (fOpenMode == forReading)
     CalculateFATExtraOffset(); // FAT has some sectors before the bitmap starts counting
 
@@ -520,10 +527,13 @@ void CDiskImageStream::Close()
       CHECK_KERNEL_EX_HANDLE_PARAM1(ntStatus, EWinException::volumeOpenError, fName.c_str());
       ZeroMemory(&volData, sizeof(volData));
       res = DeviceIoControl(fHandle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, 0, &volData, sizeof(volData), &dummy, NULL);
-      LONGLONG newVolSize = fSize / fBytesPerCluster;
-      if (res && volData.TotalClusters.QuadPart != newVolSize) {
-        res = DeviceIoControl(fHandle, FSCTL_EXTEND_VOLUME, &newVolSize, sizeof(newVolSize), NULL, 0, &dummy, NULL);
-        // CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_EXTEND_VOLUME");
+      if (res) {
+        LONGLONG newVolSize = fSize / fBytesPerCluster;
+        if (newVolSize > volData.TotalClusters.QuadPart && newVolSize - volData.TotalClusters.QuadPart > fBytesPerCluster) {
+          res = DeviceIoControl(fHandle, FSCTL_EXTEND_VOLUME, &newVolSize, sizeof(newVolSize), NULL, 0, &dummy, NULL);
+          // CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_EXTEND_VOLUME");
+          // only workson NTFS partition may fail for various reasons, we ignore errors but just try to resize
+        }
       }
       CloseDevice();
     }
