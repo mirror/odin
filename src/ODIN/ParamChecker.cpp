@@ -208,6 +208,7 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
   CDriveInfo **pContainedVolumes = NULL;
   int partitionsToSave;
   wstring volumeFileName;
+  bool displayedMountedWarning = false;
   
   if (isHardDisk) {
     partitionsToSave = pDriveInfo->GetContainedVolumes();
@@ -221,9 +222,10 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
   
   for (int i=0; i<partitionsToSave; i++) {
     wstring sourceDrive = pContainedVolumes[i]->GetMountPoint();
-    if (!pContainedVolumes[i]->IsMounted() ) {
+    if (!pContainedVolumes[i]->IsMounted() && !displayedMountedWarning) {
       msgStr.LoadStringW(IDS_UNMOUNTED_VOLUME);
       res = fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TOkCancel, (LPCWSTR)msgStr);
+      displayedMountedWarning = true; // display only once
       if (res != IUserFeedback::TOk) {
         delete pContainedVolumes;
         return res;

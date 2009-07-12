@@ -756,8 +756,8 @@ void CDiskImageStream::CalculateFATExtraOffset()
       ATLTRACE("Bytes per cluster from boot sector is: %u\n", bootSector->SectorsPerCluster * fBytesPerSector);
       ATLTRACE("CalculateFATExtraOffset() OEMID is: %s\n", bootSector->OEMID);
       ATLTRACE("CalculateFATExtraOffset() partition type is: %d\n", fPartitionType);
+      fBytesPerClusterFromBootSector = bootSector->SectorsPerCluster * fBytesPerSector;
     if ((!memcmp(bootSector->OEMID, "NTFS    ", 8) || !memcmp(bootSector->OEMID, "MSDOS5.0", 8))) {
-      // fBytesPerCluster = bootSector->SectorsPerCluster * fBytesPerSector;
 		  DWORD sectorsPerFAT = 0;
 
       // PARTITION_HUGE??? 

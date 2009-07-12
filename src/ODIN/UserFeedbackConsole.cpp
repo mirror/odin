@@ -64,14 +64,14 @@ CUserFeedbackConsole::TFeedbackResult CUserFeedbackConsole::UserMessage(TMessage
         wcout << L"Press (y)es or (n)o: ";
       } else if (mode == IUserFeedback::TOkCancel) {
         wcout << L"Press (y) for OK or (n) for Cancel: "; 
-        if (!fForce)
-          wcin.getline(input, bufsize); 
-        else 
-          input[0] = L'Y';
-
-        if (input[0] == 'y' || input[0] == 'Y' || input[0] == 'n' || input[0] == 'N')
-          notCorrectInput = false;
       }
+      if (!fForce)
+        wcin.getline(input, bufsize); 
+      else 
+        input[0] = L'Y';
+
+      if (input[0] == 'y' || input[0] == 'Y' || input[0] == 'n' || input[0] == 'N')
+        notCorrectInput = false;
     }
     if (input[0] == 'y' || input[0] == 'Y')
       return mode == IUserFeedback::TOkCancel ? TOk : TYes;
