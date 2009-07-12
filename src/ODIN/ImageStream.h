@@ -243,6 +243,10 @@ class CDiskImageStream: public IImageStream
     return fBytesPerCluster;
   }
 
+  unsigned GetBytesPerClusterFromBootSector() const {
+    return fBytesPerClusterFromBootSector;
+  }
+
   unsigned __int64 GetAllocatedBytes() const {
       return fBytesUsed;
   }
@@ -267,6 +271,7 @@ private:
   unsigned __int64   fSize;     // number of total bytes in partition
   unsigned fBytesPerSector;
   unsigned fBytesPerCluster;
+  unsigned fBytesPerClusterFromBootSector;
   unsigned __int64 fBytesUsed;  // number of used bytes in partition
   CompressedRunLengthStreamReader* fAllocMapReader;
   bool               fIsMounted;

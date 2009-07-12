@@ -347,13 +347,14 @@ void COdinManager::DoCopy(TOdinOperation operation, LPCWSTR fileName, int driveI
       fileStream->SetComment(fComment.c_str());
       fileStream->SetCompressionFormat(GetCompressionMode());
       fileStream->SetVolumeFormat(isHardDisk ? CImageFileHeader::volumeHardDisk : CImageFileHeader::volumePartition);
-      if (((CDiskImageStream*)fSourceImage)->GetBytesPerCluster() == 0) {
-        // image stream could not detect cluster size so we just take the one from GetDiskFreeEx()
-        ((CDiskImageStream*)fSourceImage)->SetBytesPerCluster(bytesPerCluster);
+      if (bytesPerCluster == 0) {
+        // drive info could not detect cluster size so we just take the one from GetDiskFreeEx()
+        // happens if we do not get a mount name like d:
+        bytesPerCluster = ((CDiskImageStream*)fSourceImage)->GetBytesPerClusterFromBootSector();
       }
-      else
-        bytesPerCluster = ((CDiskImageStream*)fSourceImage)->GetBytesPerCluster();
 
+      ((CDiskImageStream*)fSourceImage)->SetBytesPerCluster(bytesPerCluster);
+      
       if (bSaveAllBlocks || isHardDisk || !((CDiskImageStream*)fSourceImage)->IsMounted() || bytesPerCluster == 0) 
         bSaveAllBlocks = true;
       if (!bSaveAllBlocks) {

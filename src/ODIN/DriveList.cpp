@@ -132,23 +132,9 @@ void CDriveInfo::Refresh(void)
   // watch.Stop();
   // watch.TraceTime(L"Open device in refresh");
   if (ntStatus == 0) {
-/* * /
-struct _DriveLayout16 {
-DRIVE_LAYOUT_INFORMATION_EX driveLayout;
-PARTITION_INFORMATION_EX partitionInfo[15];
-} driveLayout16;
-
-//DWORD size = sizeof(DRIVE_LAYOUT_INFORMATION_EX) + 15 * sizeof(PARTITION_INFORMATION_EX);
-//DRIVE_LAYOUT_INFORMATION_EX* pBuf = (DRIVE_LAYOUT_INFORMATION_EX*)new BYTE[size]; 
-bSuccess = DeviceIoControl(hDrive, IOCTL_DISK_GET_DRIVE_LAYOUT_EX, NULL, 0, &driveLayout16, sizeof(driveLayout16), &nCount, NULL);
-if (!bSuccess)
-  bSuccess = GetLastError();
-//delete pBuf;
-/**/
     bSuccess = DeviceIoControl(hDrive, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, &geometry, sizeof(geometry), &nCount, NULL);
     if (bSuccess) {
       DeviceIoControl(hDrive, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &partition, sizeof(partition), &nCount, NULL);
-      CloseHandle(hDrive);
       if (fDriveType == driveFloppy)
         fBytes = geometry.Cylinders.QuadPart * geometry.TracksPerCylinder * geometry.SectorsPerTrack * geometry.BytesPerSector;
       else
@@ -173,19 +159,22 @@ if (!bSuccess)
         fBytes = 0; fSectors = 0; fBytesPerSector = 0; fSectorsPerTrack = 0; fDriveType = driveUnknown;
         fKnownType = fReadable = false;
       }
-      fIsMounted = DeviceIoControl(hDrive, FSCTL_IS_VOLUME_MOUNTED, NULL, 0, NULL, 0, &nCount, NULL) != FALSE;  
-
+      fIsMounted = DeviceIoControl(hDrive, FSCTL_IS_VOLUME_MOUNTED, NULL, 0, NULL, 0, &nCount, NULL) != FALSE;
+      // This seems to be a reliable indicator whether you are able to get the list of used blocks later
+      ATLTRACE(L"Getting volume mounted information for %s, result: %s, last error: %d.\n", fDeviceName.c_str(), fIsMounted? L"true": L"false", GetLastError());
       // get volumen name:
       if (fMountPoint.length() > 0) {
         const DWORD cBufLen = MAX_PATH+1;
         DWORD serNo, maxCompLen, fsFlags; 
         wchar_t volName[cBufLen];
         bSuccess = GetVolumeInformation(fMountPoint.c_str(), volName, cBufLen, &serNo, &maxCompLen, &fsFlags, NULL, 0);
+        ATLTRACE(L"Getting volume information for %s, result: %s.\n", fDeviceName.c_str(), bSuccess? L"true": L"false");
         if (bSuccess)
           fVolName = volName;
         else
           ATLTRACE(L"Failed to get volume information for %s.\n", fMountPoint.c_str());
       }
+      CloseHandle(hDrive);
     } else { 
       fBytes = 0; fSectors = 0; fBytesPerSector = 0; fSectorsPerTrack = 0; fDriveType = driveUnknown;
       fKnownType = fReadable = false;
@@ -310,8 +299,12 @@ CDriveList::CDriveList(bool ShowProgress)
     for (unsigned n = 0; n < devices.size(); n++) {
       wstring deviceName = devices[n], displayName, mountPoint;
       size_t length = deviceName.length();
-      //ATLTRACE(" Found device name [%d]: %S Length: %d\n", n, deviceName.c_str(), Length);
-      if ((length == 15 && deviceName.find(L"Floppy") == 8) || (length == 17 && deviceName.find(L"Harddisk") == 8)) {
+      size_t slashPos = deviceName.find(L'\\', 8); // pos of '\' after /Device
+      size_t slashPos2;
+      //ATLTRACE(" Found device name [%d]: %S Length: %d\n", n, deviceName.c_str(), length);
+      // search for \Device\Floppy or \DeviceHarddiskNN without a suffix
+      if ((length == 15 && deviceName.find(L"Floppy") == 8) || (slashPos == string::npos && deviceName.find(L"Harddisk") == 8)
+        && deviceName[16] >= L'0' && deviceName[16] <= L'9') {
         displayName = deviceName;
         mountPoint = volumes[deviceName];
         if (!mountPoint.length() == 0)
@@ -330,18 +323,22 @@ CDriveList::CDriveList(bool ShowProgress)
             for (unsigned i = 0; i < partitions.size(); i++) {
               wstring partitionDeviceName = partitions[i], partitionDisplayName, partitionMountPoint;
               ATLTRACE(" Found partition device name [%d]: %S Length: %d\n", i, partitionDeviceName.c_str(), partitionDeviceName.length());
-              if ((partitionDeviceName.find(L"Partition0") == string::npos) && (partitionDeviceName.find(L"Partition") == 18) && (partitionDeviceName.length() == 28) ) {
-                partitionCount++; // we found a real partition
-                CDriveInfo *partitionInfo;
-                wstring volumeLink;
-                partitionDisplayName = partitionDeviceName;
-                bool ok = GetNTLinkDestination(partitionDeviceName.c_str(), volumeLink);
-                partitionMountPoint = volumes[volumeLink];
-                if (partitionMountPoint.length() > 0)
-                  partitionDisplayName += L" ("+ partitionMountPoint + L")";
-                partitionInfo = new CDriveInfo(partitionDisplayName, partitionDeviceName, partitionMountPoint, false);
-                partitionInfo->SetParent(pDiskInfo);
-                fDriveList.push_back(partitionInfo);
+              slashPos = partitionDeviceName.find(L'\\', 8); // pos of '\' after \Device
+              slashPos2 = partitionDeviceName.find(L'\\', slashPos+1); // pos of '\' after \Device\HarddiskNN
+              if ((partitionDeviceName.find(L"Partition0") == string::npos) && 
+                (partitionDeviceName.find(L"Partition") == slashPos+1) && (slashPos2 == string::npos) 
+                && partitionDeviceName[slashPos+10] >= L'0' && partitionDeviceName[slashPos+10] <= L'9') { // \Device\HarddiskNN\PartionMM                
+                  partitionCount++; // we found a real partition
+                  CDriveInfo *partitionInfo;
+                  wstring volumeLink;
+                  partitionDisplayName = partitionDeviceName;
+                  bool ok = GetNTLinkDestination(partitionDeviceName.c_str(), volumeLink);
+                  partitionMountPoint = volumes[volumeLink];
+                  if (partitionMountPoint.length() > 0)
+                    partitionDisplayName += L" ("+ partitionMountPoint + L")";
+                  partitionInfo = new CDriveInfo(partitionDisplayName, partitionDeviceName, partitionMountPoint, false);
+                  partitionInfo->SetParent(pDiskInfo);
+                  fDriveList.push_back(partitionInfo);
               }  
             }  
           } // if
@@ -362,11 +359,15 @@ CDriveList::CDriveList(bool ShowProgress)
             // find correct partition
             for (unsigned i = 0; i < partitions.size(); i++) {
               wstring partitionDeviceName = partitions[i];
-              if ((partitionDeviceName.find(L"Partition0") == string::npos) && (partitionDeviceName.find(L"Partition") == 18) && (partitionDeviceName.length() == 28) ) {
-                ntStatus = NTOpen(&hDrive, partitionDeviceName.c_str(), GENERIC_READ, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ | FILE_SHARE_WRITE, FILE_OPEN, FILE_SEQUENTIAL_ONLY);
-                DeviceIoControl(hDrive, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &partition, sizeof(partition), &nCount, NULL);
-                bytes2 = partition.PartitionLength.QuadPart;
-                CloseHandle(hDrive);
+              slashPos = partitionDeviceName.find(L'\\', 8); // pos of '\' after \Device
+              slashPos2 = partitionDeviceName.find(L'\\', slashPos+1); // pos of '\' after \Device\HarddiskNN
+              if ((partitionDeviceName.find(L"Partition0") == string::npos) && 
+                (partitionDeviceName.find(L"Partition") == slashPos+1) && (slashPos2 == string::npos) 
+                && partitionDeviceName[slashPos+10] >= L'0' && partitionDeviceName[slashPos+10] <= L'9') { // \Device\HarddiskNN\PartionMM                
+                  ntStatus = NTOpen(&hDrive, partitionDeviceName.c_str(), GENERIC_READ, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ | FILE_SHARE_WRITE, FILE_OPEN, FILE_SEQUENTIAL_ONLY);
+                  DeviceIoControl(hDrive, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &partition, sizeof(partition), &nCount, NULL);
+                  bytes2 = partition.PartitionLength.QuadPart;
+                  CloseHandle(hDrive);
               }
             }
             skipEntireDiskPartion = bytes1==bytes2; // does root partition and first partions have same size?

@@ -1,3 +1,17 @@
+Version 0.32 (2009-07-13)
+=========================
+Changes:
+
+Bug fixes:
+ - Fix problem with command line and confirmation question that target volume
+   is too small (question repeats endlessly)
+ - Fix warning for unmounted volume is displayed even if disk only contains 
+   mounted volumes
+ - Fix warning for unmounted volume is displayed only once
+ - fix recognize known file systems that do not have a drive letter correctly
+ - Support more than nine disks and more than nine partitions per disk (untested)
+
+Version 0.31 (2009-05-19)
 =========================
 Changes:
 
@@ -16,7 +30,8 @@ Bug fixes:
  - exit after completion still gives warning to cancel operation
  - change code to check if a volume is mounted (use IOCTL and not drive letter)
    
-=========================
+Version 0.3 (2009-05-15)
+========================
 Changes:
  - Introduce command line interface and odinc.exe as command line application
  - Display volume label in device list
