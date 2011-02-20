@@ -508,7 +508,7 @@ void CParamChecker::FormatNumberWithDots(unsigned __int64 value, LPWSTR buffer, 
   size_t len2 = wcslen(buffer2);
   size_t j=len2 + ((len2-1) / 3);
   buffer[j--] = L'\0';
-  for (int i=len2-1; i>=0; i--) {
+  for (size_t i=len2-1; i>=0; i--) {
     buffer[j--] = buffer2[i];
     if (i > 0 &&(len2-i) %3 == 0)
       buffer[j--] = L'.';
