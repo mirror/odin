@@ -858,7 +858,7 @@ LRESULT CODINDlg::OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& b
     }
   } catch (Exception& e) {
     wstring msg = e.GetMessage();
-    int res = AtlMessageBox(m_hWnd, msg.c_str(), IDS_ERROR, MB_ICONEXCLAMATION | MB_OKCANCEL);
+    int res = AtlMessageBox(m_hWnd, msg.c_str(), IDS_ERROR, MB_ICONEXCLAMATION | MB_OK);
     DeleteProcessingInfo(true);
     fOdinManager.Terminate();
     if (::IsWindow(m_hWnd))   // may be destroyed if user pressed Cancel button
@@ -868,11 +868,10 @@ LRESULT CODINDlg::OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& b
     // We've encountered an exception sometime before we started the operation, so close down everything
     // as gracefully as we can.
     DeleteProcessingInfo(true);
+    fOdinManager.Terminate();
     if (::IsWindow(m_hWnd))    // may be destroyed if user pressed Cancel button
        EnableControlsAfterProcessingComplete();
-    throw;
   }
-
   fVolumeList.SetFocus();
   return 0;
 }
@@ -886,7 +885,6 @@ LRESULT CODINDlg::OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOO
       fOdinManager.CancelOperation();
       if (::IsWindow(m_hWnd))   // may be destroyed if user pressed Cancel button
         EnableControlsAfterProcessingComplete();
-
     }
   } else {
     DeleteProcessingInfo(true);

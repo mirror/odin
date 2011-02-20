@@ -156,7 +156,8 @@ void CPartitionInfoMgr::WritePartitionInfoToDisk(const wchar_t* driveName)
   wstring driveDeviceName(driveName);
   DWORD dummy, res, bytesWritten;
   HANDLE hDisk;
-  CDiskImageStream diskStream; // we use this to lock the volumes and unmount
+  CDiskImageStream *p = new CDiskImageStream();
+  CDiskImageStream& diskStream = *p; // we use this to lock the volumes and unmount
 
   bool isRawDisk = driveDeviceName.find(L"Partition0") != std::string::npos;
   if (!isRawDisk) {
@@ -183,8 +184,8 @@ void CPartitionInfoMgr::WritePartitionInfoToDisk(const wchar_t* driveName)
   CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_SET_DRIVE_LAYOUT_EX");
 
   // notify windows that the partition scheme has changed and that the drives may have changed
-  res = DeviceIoControl(hDisk, IOCTL_DISK_UPDATE_PROPERTIES, NULL, 0, NULL, 0, &dummy, NULL);
-  CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_UPDATE_PROPERTIES");
+//  res = DeviceIoControl(hDisk, IOCTL_DISK_UPDATE_PROPERTIES, NULL, 0, NULL, 0, &dummy, NULL);
+//  CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_UPDATE_PROPERTIES");
 
   diskStream.Close();
 }

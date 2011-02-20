@@ -100,10 +100,11 @@ void ODINManagerTest::setUp()
   wcout << L"===========================================" << endl;
   wcout << L"Test data dir: " << fTestDataDir().c_str() << endl;
   wcout << L"drive that is backuped and restored: " << fImageDrive().c_str() << endl;
+  wcout << L"disk used for entire disk backup/restore: " << fImageHarddisk.c_str() << endl;
   wcout << L"WARNING: This drive is formatted and all contained data will be lost!" << endl;
   wcout << L"directory where image is stored: " << fImageSaveDir().c_str() << endl;
   wcout << L"Time in ms to wait after formatting drive: " << fSleepTime() << endl;
-  
+    
   fMgr.RefreshDriveList();
 
   // save original options:
@@ -436,6 +437,8 @@ void ODINManagerTest::ODINManagerTestTemplatePartition(TFileSystem fileSystem, L
   // Step 9:
   // compare CRC values and check that they are the same
   wcout << L"Comparing results." << endl;
+  wcout << L"Source files found: " << fSrcCrc32.size() << endl;
+  wcout << L"Destination files found: " << fDestCrc32.size() << endl;
   CPPUNIT_ASSERT(fDestCrc32.size() == fSrcCrc32.size());
   vector <DWORD>::iterator iter1;
   vector <DWORD>::iterator iter2;
@@ -509,11 +512,11 @@ void ODINManagerTest::ODINManagerTestTemplateEntireDisk(const wstring& harddiskD
   TFileSystem* fileSystems;
   unsigned driveCount, indexHardDisk;
   wstring imageRootPath = fImageDrive() + L"\\";
+  wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test disk before restoring image: " << harddiskDevice << endl;
   indexHardDisk = GetDrivesOfHarddisk(harddiskDevice, driveCount, drives, fileSystems);
   CPPUNIT_ASSERT_MESSAGE("Configuration error: hard disk device name for back/restore test not found", (int)indexHardDisk >= 0);
 
   // Step 1:
-  wcout << (fUseFormatDrive ? L"Formatting" : L"Deleting") << L" test disk before restoring image: " << harddiskDevice << endl;
   if (fUseFormatDrive)
     FormatTestDriveMultiple(driveCount, drives, fileSystems, L"UnitTest");
   else

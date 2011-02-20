@@ -139,6 +139,10 @@ void CDriveInfo::Refresh(void)
         fBytes = geometry.Cylinders.QuadPart * geometry.TracksPerCylinder * geometry.SectorsPerTrack * geometry.BytesPerSector;
       else
         fBytes = partition.PartitionLength.QuadPart;
+      ATLTRACE(L"Getting size for %s, using IOCTL_DISK_GET_PARTITION_INFO_EX: %I64d\n", fDeviceName.c_str(), fBytes);
+      //GET_LENGTH_INFORMATION lengthInfo;
+      //DeviceIoControl(hDrive, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &lengthInfo, sizeof(lengthInfo), &nCount, NULL);
+      //ATLTRACE(L"Getting size for %s, using IOCTL_DISK_GET_LENGTH_INFO: %I64d\n", fDeviceName.c_str(), lengthInfo.Length.QuadPart);
       fBytesPerSector = geometry.BytesPerSector;
       fSectors = fBytes / fBytesPerSector;
       fSectorsPerTrack = geometry.SectorsPerTrack;

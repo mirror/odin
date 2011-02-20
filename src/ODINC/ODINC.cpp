@@ -19,7 +19,8 @@
     For more information and the latest version of the source code see
     <http://sourceforge.net/projects/odin-win>
 
-******************************************************************************/// ODINC.cpp : Defines the entry point for the console application.
+******************************************************************************/
+// ODINC.cpp : Defines the entry point for the console application.
 //
 
 #ifndef _WIN32_WINNT            

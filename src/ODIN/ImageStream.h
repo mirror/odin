@@ -199,6 +199,7 @@ class CDiskImageStream: public IImageStream
   } TTargetGeometry ;
 
   CDiskImageStream();
+  CDiskImageStream(int volumeCount);
   virtual ~CDiskImageStream();
   
   virtual LPCWSTR GetName() const
@@ -221,7 +222,8 @@ class CDiskImageStream: public IImageStream
   virtual void SetCompletedInformation(DWORD crc32, unsigned __int64 processedBytes);
 
   unsigned __int64 StoreVolumeBitmap(unsigned int chunkSize, HANDLE hOutHandle, LPCWSTR fileName);
-  void CDiskImageStream::ReadDriveLayout();
+  void ReadDriveLayout();
+  void UnlockSubVolume(int i);
 
   void SetContainedSubPartitionsCount(int containedVolumeCount) {
     fContainedVolumeCount = containedVolumeCount;
@@ -258,6 +260,8 @@ class CDiskImageStream: public IImageStream
 private:
 
   // methods:
+  void Init();
+  void DismountAndLockVolume();
   long OpenDevice(DWORD shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE);
   void CloseDevice();
   void CalculateFATExtraOffset();
@@ -320,10 +324,11 @@ class CSubVolumeLocker
 public:
   CSubVolumeLocker(LPCWSTR rootName, int containedVolumes);
   ~CSubVolumeLocker();
-private:
-  void OpenAndLockVolume(LPCWSTR volName, int index);
-  void CloseAndUnlockVolume(int index);
 
+  void CloseAndUnlockVolume(int index);
+  void OpenAndLockVolume(LPCWSTR volName, int index);
+
+private:
   HANDLE* fHandles;
   int fSize;
 };
