@@ -56,7 +56,7 @@ private:
 
   CDriveInfo* GetDriveInfo(int index);
   unsigned GetDriveCount();
-
+  void FormatNumberWithDots(unsigned __int64 value, LPWSTR buffer, size_t bufsize);
 
   IUserFeedback& fFeedback;
   COdinManager& fOdinManager;

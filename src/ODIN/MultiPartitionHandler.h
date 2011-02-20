@@ -51,6 +51,7 @@ public:
   static bool VerifyPartitionOrDisk( LPCWSTR fileName, COdinManager &odinMgr, DWORD& crc32FromFileHeader, ISplitManagerCallback* cb, IWaitCallback* wcb, IUserFeedback& feedback);
 
 private:
+  static void WaitForDriveReady(COdinManager &odinMgr, int index, unsigned partitionCount, const std::wstring& targetDiskDeviceName);
   static void GetNoFilesAndFileSize(LPCWSTR fileName, ISplitManagerCallback* cb, unsigned& fileCount, 
                                          unsigned __int64& fileSize, bool& isEntireDriveImageFile);
 

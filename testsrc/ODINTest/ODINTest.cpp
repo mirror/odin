@@ -62,7 +62,7 @@ int _tmain(int argc, _TCHAR* argv[])
   //runner.setOutputter( new CppUnit::CompilerOutputter( &runner.result(),
   //                                                     std::cerr ) );
   runner.setOutputter( new CppUnit::TextOutputter( &runner.result(),
-                                                       std::cerr ) );
+                                                       std::cout ) );
   
   bool wasSuccessful;
 

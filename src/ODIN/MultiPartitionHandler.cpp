@@ -146,13 +146,18 @@ void CMultiPartitionHandler::RestorePartitionOrDisk(int index, LPCWSTR fileName,
     partInfoMgr.ReadPartitionInfoFromFile(mbrFileName.c_str());
     partInfoMgr.MakeWritable();
     partInfoMgr.WritePartitionInfoToDisk(pDriveInfo->GetDeviceName().c_str());
-    odinMgr.RefreshDriveList();
     // now get drive info again, because the index might have changed:
+    
+    unsigned subPartitions = partInfoMgr.GetPartitionCount();
+    WaitForDriveReady(odinMgr, index, subPartitions, targetDiskDeviceName);
+  
+    CDiskImageStream diskLock(subPartitions);
+    diskLock.Open(targetDiskDeviceName.c_str(), IImageStream::forReading);
+
     index = odinMgr.GetDriveList()->GetIndexOfDeviceName(targetDiskDeviceName);
     pDriveInfo = odinMgr.GetDriveList()->GetItem(index);
 
     odinMgr.Uncancel();
-    unsigned subPartitions = partInfoMgr.GetPartitionCount();
     unsigned diskNo = pDriveInfo->GetDiskNumber();
     wstring volumeDeviceName, partitionFileName;
     for (unsigned i=0; i<subPartitions && !odinMgr.WasCancelled(); i++) {
@@ -163,9 +168,11 @@ void CMultiPartitionHandler::RestorePartitionOrDisk(int index, LPCWSTR fileName,
       CFileNameUtil::RemoveTrailingNumberFromFileName(volumeFileName);
       GetNoFilesAndFileSize(volumeFileName.c_str(), cb, fileCount, fileSize, isEntireDriveImagefile);
       wcb->OnPartitionChange(i, subPartitions);
+      diskLock.UnlockSubVolume(i);
       odinMgr.RestorePartition(volumeFileName.c_str(), volumeIndex, fileCount, fileSize, fileCount>0 ? cb : NULL, wcb);
       odinMgr.WaitToCompleteOperation(wcb);
     }
+    diskLock.Close();
   } else {
 		  // restore file to drive
       wcb->OnPartitionChange(0, 1);
@@ -173,6 +180,37 @@ void CMultiPartitionHandler::RestorePartitionOrDisk(int index, LPCWSTR fileName,
       odinMgr.WaitToCompleteOperation(wcb);
   }
   odinMgr.Uncancel();
+}
+
+void CMultiPartitionHandler::WaitForDriveReady(COdinManager &odinMgr, int index, unsigned partitionCount, const wstring& targetDiskDeviceName) {
+    int retries = 0;
+    DWORD waitTime = 50;
+    bool allPartitionsFound = false;
+    wstring volumeDeviceName;
+    while ((index < 0 || !allPartitionsFound ) && retries++ < 5) {
+      Sleep(waitTime); // wait a moment, may cause crash because list is not yet up to date
+      // waitTime += 100;
+      allPartitionsFound = true;
+      odinMgr.RefreshDriveList();
+      CDriveInfo* pDriveInfo = odinMgr.GetDriveList()->GetItem(index);
+      index = odinMgr.GetDriveList()->GetIndexOfDeviceName(targetDiskDeviceName);
+      unsigned diskNo = pDriveInfo->GetDiskNumber();
+
+      if (index >= 0) {
+        for (unsigned i=0; i<partitionCount && !odinMgr.WasCancelled(); i++) {
+          CFileNameUtil::GenerateDeviceNameForVolume(volumeDeviceName, diskNo, i+1);
+          int volumeIndex = odinMgr.GetDriveList()->GetIndexOfDeviceName(volumeDeviceName);
+          if (volumeIndex < 0) {
+            allPartitionsFound = false;
+            ATLTRACE(L"Error: Device %s not available!!!\n", volumeDeviceName.c_str());
+            break;
+          }
+        }
+      }
+    }
+
+    if (index < 0)
+      ATLTRACE(L"Error: Device %s not available!!!\n", targetDiskDeviceName.c_str());
 
 }
 

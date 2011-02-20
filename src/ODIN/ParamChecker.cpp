@@ -369,7 +369,11 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
     partInfoMgr.ReadPartitionInfoFromFile(mbrFileName.c_str());
 
     if (partInfoMgr.GetDiskSize() > (unsigned __int64) pDriveInfo->GetBytes()) {
-      msgStr.LoadStringW(IDS_IMAGETOOBIG);
+      const int bufSize=25;
+      wchar_t buffer1[bufSize], buffer2[bufSize];
+      FormatNumberWithDots(partInfoMgr.GetDiskSize(), buffer1, bufSize);        
+      FormatNumberWithDots(pDriveInfo->GetBytes(), buffer2, bufSize);
+      msgStr.FormatMessage(IDS_IMAGETOOBIG, buffer1, buffer2);
       fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
       res = IUserFeedback::TCancel;
     } else if (partInfoMgr.GetDiskSize() < (unsigned __int64) pDriveInfo->GetBytes()) {
@@ -399,7 +403,11 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
   if (!isMBRFile) {  
       targetPartitionSize =  pDriveInfo->GetBytes();
       if (targetPartitionSize < partitionSizeToSave) {
-        msgStr.LoadStringW(IDS_IMAGETOOBIG);
+        const int bufSize=25;
+        wchar_t buffer1[bufSize], buffer2[bufSize];
+        FormatNumberWithDots(targetPartitionSize, buffer1, bufSize);        
+        FormatNumberWithDots(partitionSizeToSave, buffer2, bufSize);
+        msgStr.FormatMessage(IDS_IMAGETOOBIG, buffer1, buffer2);
         fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
         res = IUserFeedback::TCancel;
       }
@@ -491,4 +499,18 @@ CDriveInfo* CParamChecker::GetDriveInfo(int index) {
 
 unsigned CParamChecker::GetDriveCount() {
     return (unsigned) fOdinManager.GetDriveList()->GetCount();
+}
+
+void CParamChecker::FormatNumberWithDots(unsigned __int64 value, LPWSTR buffer, size_t bufsize) {
+  const int bufSize = 25;
+  wchar_t buffer2[bufSize];
+  _ui64tow_s(value, buffer2, bufSize, 10);
+  size_t len2 = wcslen(buffer2);
+  size_t j=len2 + ((len2-1) / 3);
+  buffer[j--] = L'\0';
+  for (int i=len2-1; i>=0; i--) {
+    buffer[j--] = buffer2[i];
+    if (i > 0 &&(len2-i) %3 == 0)
+      buffer[j--] = L'.';
+  }  
 }

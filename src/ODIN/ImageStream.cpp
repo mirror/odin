@@ -335,6 +335,16 @@ void CFileImageStream::SetCompletedInformation(DWORD crc32, unsigned __int64 pro
 
 CDiskImageStream::CDiskImageStream()
 {
+  Init();
+}
+
+CDiskImageStream::CDiskImageStream(int volumeCount)
+{
+  Init();
+  fContainedVolumeCount = volumeCount;
+}
+
+void CDiskImageStream::Init() {
   fHandle = NULL;
   fBytesUsed = 0;
   fSize = 0;
@@ -426,62 +436,67 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
       fSubVolumeLocker = new CSubVolumeLocker(rootName.c_str(), fContainedVolumeCount);
     }
     ReadDriveLayout();
-  } else {
-    shareMode  = (mode==forWriting) ? 0 : FILE_SHARE_WRITE;
+  } else {    
+    shareMode = FILE_SHARE_DELETE | FILE_SHARE_WRITE | FILE_SHARE_READ;
     ntStatus = OpenDevice(shareMode);
-    if (0 != ntStatus) {
-      Sleep(1000);
-        // sometimes this calls fails just try again after a little pause
-      ntStatus = OpenDevice(shareMode);
-    }
     CHECK_KERNEL_EX_HANDLE_PARAM1(ntStatus, EWinException::volumeOpenError, fName.c_str());
   }
-
-  memset(&partInfo, 0, sizeof(partInfo));
-  memset(&diskGeometry, 0, sizeof(diskGeometry));
-  memset(&lengthInfo, 0, sizeof(lengthInfo));
-  memset(&ntfsVolData, 0, sizeof(ntfsVolData));
-  res = DeviceIoControl(fHandle, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &partInfo, sizeof(partInfo), &dummy, NULL);
-  //CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_PARTITION_INFO_EX");
-  // on some disks this might fail try PARTITION_INFORMATION then
-  if (res==0) {
-    PARTITION_INFORMATION partInfo2;
-    memset(&partInfo, 0, sizeof(partInfo));
-    res = DeviceIoControl(fHandle, IOCTL_DISK_GET_PARTITION_INFO, NULL, 0, &partInfo2, sizeof(partInfo2), &dummy, NULL);
-    CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_PARTITION_INFO_EX and IOCTL_DISK_GET_PARTITION_INFO");
-    fPartitionType = partInfo2.PartitionType;
-  }
-  else {
-    CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_DRIVE_GEOMETRY");
-    fPartitionType = partInfo.Mbr.PartitionType;
-  }
-  fIsMounted = DeviceIoControl(fHandle, FSCTL_IS_VOLUME_MOUNTED, NULL, 0, NULL, 0, &dummy, NULL) != FALSE;  
-  res = DeviceIoControl(fHandle, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &lengthInfo, sizeof(lengthInfo), &dummy, NULL);
-  CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_LENGTH_INFO");
-  res = DeviceIoControl(fHandle, IOCTL_DISK_GET_DRIVE_GEOMETRY	, NULL, 0, &diskGeometry, sizeof(diskGeometry), &dummy, NULL);
-  fSize = lengthInfo.Length.QuadPart;
-  ATLTRACE("Size of volume %S is %u\n", fName.c_str(), (DWORD)fSize);
-  fBytesPerSector = diskGeometry.BytesPerSector;
-  // Note: for NTFS use: FSCTL_GET_NTFS_VOLUME_DATA to get cluster size
-  //       for FAT use getDiskFreeSpaceEx (see KB 231497,http://support.microsoft.com/?scid=kb%3Ben-us%3B231497&x=21&y=17)
-  res = DeviceIoControl(fHandle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, 0, &ntfsVolData, sizeof(ntfsVolData), &dummy, NULL);
-  if (res != 0) {
-    // we have an NTFSVolume
-    fBytesPerCluster = ntfsVolData.BytesPerCluster;
-  }
   
-  if (fOpenMode == forReading)
+  if (fOpenMode == forReading) {
+    memset(&partInfo, 0, sizeof(partInfo));
+    memset(&diskGeometry, 0, sizeof(diskGeometry));
+    memset(&lengthInfo, 0, sizeof(lengthInfo));
+    memset(&ntfsVolData, 0, sizeof(ntfsVolData));
+    res = DeviceIoControl(fHandle, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &partInfo, sizeof(partInfo), &dummy, NULL);
+    //CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_PARTITION_INFO_EX");
+    // on some disks this might fail try PARTITION_INFORMATION then
+    if (res==0) {
+      PARTITION_INFORMATION partInfo2;
+      memset(&partInfo, 0, sizeof(partInfo));
+      res = DeviceIoControl(fHandle, IOCTL_DISK_GET_PARTITION_INFO, NULL, 0, &partInfo2, sizeof(partInfo2), &dummy, NULL);
+      CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_PARTITION_INFO_EX and IOCTL_DISK_GET_PARTITION_INFO");
+      fPartitionType = partInfo2.PartitionType;
+    }
+    else {
+      CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_DRIVE_GEOMETRY");
+      fPartitionType = partInfo.Mbr.PartitionType;
+    }
+    fIsMounted = DeviceIoControl(fHandle, FSCTL_IS_VOLUME_MOUNTED, NULL, 0, NULL, 0, &dummy, NULL) != FALSE;  
+    res = DeviceIoControl(fHandle, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &lengthInfo, sizeof(lengthInfo), &dummy, NULL);
+    if (res == FALSE)
+      fSize = partInfo.PartitionLength.QuadPart; // IOCTL_DISK_GET_LENGTH_INFO not available on some older windows versions
+    else
+      fSize = lengthInfo.Length.QuadPart;
+
+    CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_DISK_GET_LENGTH_INFO");
+    res = DeviceIoControl(fHandle, IOCTL_DISK_GET_DRIVE_GEOMETRY	, NULL, 0, &diskGeometry, sizeof(diskGeometry), &dummy, NULL);
+    
+    ATLTRACE("Size of volume %S is %u\n", fName.c_str(), (DWORD)fSize);
+    fBytesPerSector = diskGeometry.BytesPerSector;
+    // Note: for NTFS use: FSCTL_GET_NTFS_VOLUME_DATA to get cluster size
+    //       for FAT use getDiskFreeSpaceEx (see KB 231497,http://support.microsoft.com/?scid=kb%3Ben-us%3B231497&x=21&y=17)
+    res = DeviceIoControl(fHandle, FSCTL_GET_NTFS_VOLUME_DATA, NULL, 0, &ntfsVolData, sizeof(ntfsVolData), &dummy, NULL);
+    if (res != 0) {
+      // we have an NTFSVolume
+      fBytesPerCluster = ntfsVolData.BytesPerCluster;
+    }
+
     CalculateFATExtraOffset(); // FAT has some sectors before the bitmap starts counting
 
   // note: under Vista/Server2008 there are new limitations in the direct access of disks
   // there are reserved areas that can not be written to even with admin rights, see
   // http://support.microsoft.com/kb/942448 for details. Therefore we unmount volume
   //http://msdn.microsoft.com/newsgroups/default.aspx?dg=microsoft.public.win32.programmer.kernel&tid=d0ff3e7a-e32c-49dc-b3e6-6cbdd1da67ac&cat=en-us-msdn-windev-winsdk&lang=en&cr=US&sloc=en-us&m=1&p=1
-  if (fOpenMode==forWriting) {
+  } else { // (fOpenMode==forWriting) 
     res = DeviceIoControl(fHandle, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
-    CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_LOCK_VOLUME");
-    res = DeviceIoControl(fHandle, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
-    CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_DISMOUNT_VOLUME");
+    if (res == 0)
+      DismountAndLockVolume();
+        // see: http://www.eggheadcafe.com/software/aspnet/31520519/direct-disk-access-write-to-system-areas.aspx
+        // In order to achieve that you need to lock the volume by sending FSCTL_LOCK_VOLUME. This has to
+        // be issued on the same volume handle performing the actual writes. This
+        // request can fail if there are open file handles. In that case application
+        // can force dismount the file system by issuing FSCTL_DISMOUNT_VOLUME.
+    
     fWasLocked = true;
     if (!isRawDisk) { // does not work for raw disks in Win XP, no problem in Vista
       res = DeviceIoControl(fHandle, FSCTL_ALLOW_EXTENDED_DASD_IO, NULL, 0, NULL, 0, &dummy, NULL);
@@ -489,6 +504,28 @@ void CDiskImageStream::Open(LPCWSTR name, TOpenMode mode)
         ATLTRACE("Warning: DeviceIoControl with FSCTL_ALLOW_EXTENDED_DASD_IO failed.\n");
     }
   }
+}
+
+void CDiskImageStream::DismountAndLockVolume() {
+
+ long ntStatus;
+ DWORD dummy;
+ // force a dismount
+ int res = DeviceIoControl(fHandle, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
+ CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_DISMOUNT_VOLUME");
+ res = CloseHandle(fHandle);
+
+ DWORD shareMode = FILE_SHARE_DELETE | FILE_SHARE_WRITE | FILE_SHARE_READ;
+
+ ntStatus = OpenDevice(shareMode);
+ CHECK_KERNEL_EX_HANDLE_PARAM1(ntStatus, EWinException::volumeOpenError, fName.c_str());
+ res = DeviceIoControl(fHandle, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
+ CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_LOCK_VOLUME");
+}
+
+void CDiskImageStream::UnlockSubVolume(int i) {
+  if (fSubVolumeLocker != NULL)
+    fSubVolumeLocker->CloseAndUnlockVolume(i);
 }
 
 void CDiskImageStream::Close()
@@ -815,7 +852,6 @@ CSubVolumeLocker::CSubVolumeLocker(LPCWSTR rootName, int containedVolumes) {
 }
   
 CSubVolumeLocker::~CSubVolumeLocker() {
-  // for (int i=0; i<fSize; i++)
   for (int i=fSize-1; i>=0; i--)
     CloseAndUnlockVolume(i);
   delete [] fHandles;
@@ -836,22 +872,20 @@ void CSubVolumeLocker::OpenAndLockVolume(LPCWSTR volName, int index) {
   fHandles[index] = h;
   res = DeviceIoControl(h, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
   CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_LOCK_VOLUME");
-  res = DeviceIoControl(h, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
-  CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_DISMOUNT_VOLUME");
 }
 
 void CSubVolumeLocker::CloseAndUnlockVolume(int index) {
   HANDLE h = fHandles[index];
   if (h != NULL && h != INVALID_HANDLE_VALUE) {
       DWORD res, dummy;
-      // res = DeviceIoControl(h, IOCTL_VOLUME_ONLINE, NULL, 0, NULL, 0, &dummy, NULL);
-      // CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"IOCTL_VOLUME_ONLINE");
+      //res = DeviceIoControl(h, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
+      //CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_DISMOUNT_VOLUME");
       res = DeviceIoControl(h, FSCTL_UNLOCK_VOLUME, NULL, 0, NULL, 0, &dummy, NULL);
       CHECK_OS_EX_PARAM1(res, EWinException::ioControlError, L"FSCTL_UNLOCK_VOLUME");
       res = CloseHandle(h);  
       CHECK_OS_EX_INFO(res, EWinException::closeHandleError);
       ATLTRACE("Closed sub volume  with handle %u\n", h);
-
+      fHandles[index] = NULL;
   }
 }
 

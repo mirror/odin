@@ -272,6 +272,7 @@ CCommandLineProcessor::CCommandLineProcessor() {
   fVerifyRun = false;
   fCrc32 = 0;
   fExitCode = 0;
+  fpIn = fpOut = fpErr = NULL;
 }
 
 CCommandLineProcessor::~CCommandLineProcessor() {
@@ -666,6 +667,7 @@ bool  CCommandLineProcessor::InitConsole(bool createConsole) {
   long lStdHandle;
   CONSOLE_SCREEN_BUFFER_INFO coninfo;
 
+
   // Attach a console if one exists from the parent (i.e. started from a shell)
   // This works but does not works synchronously: The parent console returns 
   // immediately and there is no way to get controlled input. Therefore use
@@ -692,21 +694,27 @@ bool  CCommandLineProcessor::InitConsole(bool createConsole) {
   // redirect unbuffered STDOUT to the console
   lStdHandle = (long)GetStdHandle(STD_OUTPUT_HANDLE);
   hConHandle = _open_osfhandle(lStdHandle, _O_TEXT);
-  fpOut = _fdopen( hConHandle, "w" );
-  *stdout = *fpOut;
-  setvbuf( stdout, NULL, _IONBF, 0 );
+  if (hConHandle > 0) {
+    fpOut = _fdopen( hConHandle, "w" );
+    *stdout = *fpOut;
+    setvbuf( stdout, NULL, _IONBF, 0 );
+  }
   // redirect unbuffered STDIN to the console
   lStdHandle = (long)GetStdHandle(STD_INPUT_HANDLE);
   hConHandle = _open_osfhandle(lStdHandle, _O_TEXT);
-  fpIn = _fdopen( hConHandle, "r" );
-  *stdin = *fpIn;
-  setvbuf( stdin, NULL, _IONBF, 0 );
+  if (hConHandle > 0) {
+    fpIn = _fdopen( hConHandle, "r" );
+    *stdin = *fpIn;
+    setvbuf( stdin, NULL, _IONBF, 0 );
+  }
   // redirect unbuffered STDERR to the console
   lStdHandle = (long)GetStdHandle(STD_ERROR_HANDLE);
   hConHandle = _open_osfhandle(lStdHandle, _O_TEXT);
-  fpErr = _fdopen( hConHandle, "w" );
-  *stderr = *fpErr;
-  setvbuf( stderr, NULL, _IONBF, 0 );
+  if (hConHandle > 0) {
+    fpErr = _fdopen( hConHandle, "w" );
+    *stderr = *fpErr;
+    setvbuf( stderr, NULL, _IONBF, 0 );
+  }
   // make cout, wcout, cin, wcin, wcerr, cerr, wclog and clog
   // point to console as well
   ios::sync_with_stdio();
@@ -720,9 +728,12 @@ void CCommandLineProcessor::TerminateConsole() {
       wcout << L"Press <return> to close console window: ";
       wcin.getline(&c, 1);
     }
-    fclose(fpErr);
-    fclose(fpIn);
-    fclose(fpOut);
+    if (NULL != fpErr)
+      fclose(fpErr);
+    if (NULL != fpIn)
+      fclose(fpIn);
+    if (NULL != fpOut)
+      fclose(fpOut);
     FreeConsole();
   }
 }
