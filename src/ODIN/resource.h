@@ -55,6 +55,8 @@
 #define IDD_DIALOG_SPLASH               205
 #define IDS_INCOMPLETE_IMAGE            206
 #define IDS_UNMOUNTED_VOLUME            207
+#define IDS_DISKTOPARTITION             208
+#define IDS_CANTUSERMBREXT              209
 #define IDC_LABEL_BYTES_TOTAL           1009
 #define IDC_TAB_GENERAL                 1010
 #define IDC_TABS_SETTINGS               1011
@@ -130,7 +132,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        208
+#define _APS_NEXT_RESOURCE_VALUE        210
 #define _APS_NEXT_COMMAND_VALUE         32772
 #define _APS_NEXT_CONTROL_VALUE         1053
 #define _APS_NEXT_SYMED_VALUE           101

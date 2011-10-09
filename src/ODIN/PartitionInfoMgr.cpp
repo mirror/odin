@@ -159,11 +159,15 @@ void CPartitionInfoMgr::WritePartitionInfoToDisk(const wchar_t* driveName)
   CDiskImageStream *p = new CDiskImageStream();
   CDiskImageStream& diskStream = *p; // we use this to lock the volumes and unmount
 
+  /*
+   * Note: The following section was removed to allow restoring entire disk images to an
+   *       unpartitioned volume (mostly useful for USB sticks)
   bool isRawDisk = driveDeviceName.find(L"Partition0") != std::string::npos;
   if (!isRawDisk) {
     ATLTRACE("CPartitionInfoMgr::ReadPartionInfo Error: %S is not a disk device.\n", driveName);
     return;
   }
+  */
   diskStream.Open(driveName, IImageStream::forWriting);
   hDisk = diskStream.GetFileHandle();
   ATLTRACE("Opened raw disk device: %S with handle %u\n", driveDeviceName, hDisk);
