@@ -34,6 +34,7 @@
 #include <string>
 #include <list>
 #include <atlmisc.h>  // CString
+#include <algorithm>
 #include "UserFeedback.h"
 #include "DriveList.h"
 #include "ParamChecker.h"
@@ -220,6 +221,17 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForSavePartition(co
     pContainedVolumes[0] = GetDriveInfo(index);
   }
   
+  if (!isHardDisk) {
+    wstring mbrFileName = fileName;
+    transform(mbrFileName.begin(), mbrFileName.end(), mbrFileName.begin(), tolower);
+    const wstring mbrExt(L".mbr");
+    if (mbrFileName.length()-4  == mbrFileName.rfind(mbrExt)) {
+      msgStr.Format(IDS_CANTUSERMBREXT, fileName.c_str());
+      fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
+      return IUserFeedback::TCancel;
+    }
+  }
+
   for (int i=0; i<partitionsToSave; i++) {
     wstring sourceDrive = pContainedVolumes[i]->GetMountPoint();
     if (!pContainedVolumes[i]->IsMounted() && !displayedMountedWarning) {
@@ -356,11 +368,14 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
     if (res != IUserFeedback::TOk && res != IUserFeedback::TYes)
       return res;
     // check that target is a harddisk too 
+/* disable to allow this for USB sticks:
     if (!pDriveInfo->IsCompleteHardDisk()) {
-      msgStr.LoadStringW(IDS_WRONGPARTITIONTYPE);
-      fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
-      return IUserFeedback::TCancel;
+      msgStr.LoadStringW(IDS_DISKTOPARTITION);
+      res = fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TYesNo, (LPCWSTR)msgStr);
+      if (res != IUserFeedback::TOk && res != IUserFeedback::TYes)
+        return res;
     }
+*/
 
     // check that source and target size match
     CPartitionInfoMgr partInfoMgr;
@@ -368,12 +383,12 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
     CFileNameUtil::GenerateFileNameForMBRBackupFile(mbrFileName);
     partInfoMgr.ReadPartitionInfoFromFile(mbrFileName.c_str());
 
-    if (partInfoMgr.GetDiskSize() > (unsigned __int64) pDriveInfo->GetBytes()) {
+    if (res != IUserFeedback::TOk && partInfoMgr.GetDiskSize() > (unsigned __int64) pDriveInfo->GetBytes()) {
       const int bufSize=25;
       wchar_t buffer1[bufSize], buffer2[bufSize];
       FormatNumberWithDots(partInfoMgr.GetDiskSize(), buffer1, bufSize);        
       FormatNumberWithDots(pDriveInfo->GetBytes(), buffer2, bufSize);
-      msgStr.FormatMessage(IDS_IMAGETOOBIG, buffer1, buffer2);
+      msgStr.FormatMessage(IDS_IMAGETOOBIG, buffer2, buffer1);
       fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
       res = IUserFeedback::TCancel;
     } else if (partInfoMgr.GetDiskSize() < (unsigned __int64) pDriveInfo->GetBytes()) {
@@ -394,11 +409,12 @@ IUserFeedback::TFeedbackResult CParamChecker::CheckConditionsForRestorePartition
   // prevent restoring a hard disk to a partition or a partition to a hard disk
   if (( pDriveInfo->IsCompleteHardDisk() && volType != CImageFileHeader::volumeHardDisk) ||
       (!pDriveInfo->IsCompleteHardDisk() && volType != CImageFileHeader::volumePartition)) {
-    msgStr.LoadStringW(IDS_WRONGPARTITIONTYPE);
-    fFeedback.UserMessage(IUserFeedback::TError, IUserFeedback::TConfirm, (LPCWSTR)msgStr);
-    res = IUserFeedback::TCancel;
-    return res;
+    msgStr.LoadStringW(IDS_DISKTOPARTITION);
+    res = fFeedback.UserMessage(IUserFeedback::TWarning, IUserFeedback::TYesNo, (LPCWSTR)msgStr);
+    if (res != IUserFeedback::TOk && res != IUserFeedback::TYes)
+      return res;
   }
+
 
   if (!isMBRFile) {  
       targetPartitionSize =  pDriveInfo->GetBytes();
@@ -508,7 +524,7 @@ void CParamChecker::FormatNumberWithDots(unsigned __int64 value, LPWSTR buffer, 
   size_t len2 = wcslen(buffer2);
   size_t j=len2 + ((len2-1) / 3);
   buffer[j--] = L'\0';
-  for (size_t i=len2-1; i>=0; i--) {
+  for (int i=(int)(len2-1); i>=0; i--) {
     buffer[j--] = buffer2[i];
     if (i > 0 &&(len2-i) %3 == 0)
       buffer[j--] = L'.';
